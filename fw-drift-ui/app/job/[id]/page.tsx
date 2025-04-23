@@ -35,6 +35,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Progress } from "@/components/ui/progress"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // Mock firewall rules data
 const firewallRules = {
@@ -60,17 +61,51 @@ const firewallRules = {
   ],
 }
 
-// Update the mock data centers to reflect GF1 and GF2
+// Update the mock data centers to include server groups
 const dataCenters = [
   {
     id: "dc-gf1",
     name: "GF1",
     location: "Primary Data Center",
-    servers: [
-      { id: "srv-gf1-1", name: "firewall-01", status: "aligned" },
-      { id: "srv-gf1-2", name: "firewall-02", status: "drifting", driftingRules: [2, 5] },
-      { id: "srv-gf1-3", name: "firewall-03", status: "aligned" },
-      { id: "srv-gf1-4", name: "firewall-04", status: "drifting", driftingRules: [3] },
+    serverGroups: [
+      {
+        id: "group-gf1-web",
+        name: "Web Servers",
+        description: "Frontend web servers",
+        template: "Default Firewall Template",
+        status: "drifting",
+        driftPercentage: 15,
+        servers: [
+          { id: "srv-gf1-web-1", name: "web-01", status: "aligned" },
+          { id: "srv-gf1-web-2", name: "web-02", status: "drifting", driftingRules: [2, 5] },
+          { id: "srv-gf1-web-3", name: "web-03", status: "aligned" },
+        ],
+      },
+      {
+        id: "group-gf1-db",
+        name: "Database Servers",
+        description: "Backend database servers",
+        template: "PCI Compliance",
+        status: "drifting",
+        driftPercentage: 8,
+        servers: [
+          { id: "srv-gf1-db-1", name: "db-01", status: "drifting", driftingRules: [3] },
+          { id: "srv-gf1-db-2", name: "db-02", status: "aligned" },
+        ],
+      },
+      {
+        id: "group-gf1-app",
+        name: "Application Servers",
+        description: "Middleware application servers",
+        template: "Default Firewall Template",
+        status: "aligned",
+        driftPercentage: 0,
+        servers: [
+          { id: "srv-gf1-app-1", name: "app-01", status: "aligned" },
+          { id: "srv-gf1-app-2", name: "app-02", status: "aligned" },
+          { id: "srv-gf1-app-3", name: "app-03", status: "aligned" },
+        ],
+      },
     ],
     status: "drifting",
     driftPercentage: 12,
@@ -79,11 +114,43 @@ const dataCenters = [
     id: "dc-gf2",
     name: "GF2",
     location: "Secondary Data Center",
-    servers: [
-      { id: "srv-gf2-1", name: "firewall-01", status: "aligned" },
-      { id: "srv-gf2-2", name: "firewall-02", status: "aligned" },
-      { id: "srv-gf2-3", name: "firewall-03", status: "drifting", driftingRules: [7, 9] },
-      { id: "srv-gf2-4", name: "firewall-04", status: "aligned" },
+    serverGroups: [
+      {
+        id: "group-gf2-web",
+        name: "Web Servers",
+        description: "Frontend web servers",
+        template: "Default Firewall Template",
+        status: "aligned",
+        driftPercentage: 0,
+        servers: [
+          { id: "srv-gf2-web-1", name: "web-01", status: "aligned" },
+          { id: "srv-gf2-web-2", name: "web-02", status: "aligned" },
+        ],
+      },
+      {
+        id: "group-gf2-db",
+        name: "Database Servers",
+        description: "Backend database servers",
+        template: "PCI Compliance",
+        status: "drifting",
+        driftPercentage: 20,
+        servers: [
+          { id: "srv-gf2-db-1", name: "db-01", status: "drifting", driftingRules: [7, 9] },
+          { id: "srv-gf2-db-2", name: "db-02", status: "aligned" },
+        ],
+      },
+      {
+        id: "group-gf2-app",
+        name: "Application Servers",
+        description: "Middleware application servers",
+        template: "Default Firewall Template",
+        status: "drifting",
+        driftPercentage: 5,
+        servers: [
+          { id: "srv-gf2-app-1", name: "app-01", status: "aligned" },
+          { id: "srv-gf2-app-2", name: "app-02", status: "drifting", driftingRules: [4] },
+        ],
+      },
     ],
     status: "drifting",
     driftPercentage: 8,
@@ -140,42 +207,46 @@ const getJobDetails = (id) => {
     },
     {
       id: 3,
-      name: "East Coast DC Server Drift Check",
+      name: "GF1 Server Drift Check",
       template: "PCI Compliance",
-      status: "failed",
+      status: "successful",
       started: "2025-04-21T18:45:00",
       finished: "2025-04-21T18:46:12",
       duration: "1m 12s",
       user: "admin",
-      inventory: "East Coast DC",
-      dataCenters: ["dc-east"],
+      inventory: "GF1 Data Center",
+      dataCenters: ["dc-gf1"],
       reportType: "drift",
       driftSummary: {
+        totalGroups: 3,
+        driftingGroups: 2,
         totalServers: 8,
-        driftingServers: 3,
+        driftingServers: 2,
         totalRules: 27,
-        driftingRules: 5,
-        complianceScore: 82,
+        driftingRules: 3,
+        complianceScore: 88,
       },
     },
     {
       id: 4,
-      name: "Central DC Server Drift Analysis",
+      name: "GF2 Server Drift Analysis",
       template: "Default Firewall Template",
       status: "successful",
       started: "2025-04-21T11:20:00",
       finished: "2025-04-21T11:22:45",
       duration: "2m 45s",
       user: "devops",
-      inventory: "Central DC",
-      dataCenters: ["dc-central"],
+      inventory: "GF2 Data Center",
+      dataCenters: ["dc-gf2"],
       reportType: "drift",
       driftSummary: {
+        totalGroups: 3,
+        driftingGroups: 2,
         totalServers: 6,
-        driftingServers: 1,
+        driftingServers: 2,
         totalRules: 27,
-        driftingRules: 2,
-        complianceScore: 95,
+        driftingRules: 3,
+        complianceScore: 90,
       },
     },
     {
@@ -270,7 +341,7 @@ const getJobDetails = (id) => {
     description:
       baseJob.reportType === "consistency"
         ? `Firewall rules comparison across ${baseJob.dataCenters.length} data centers.`
-        : `Server drift analysis within ${baseJob.dataCenters[0]} data center.`,
+        : `Server drift analysis within ${jobDataCenters[0]?.name || ""} data center.`,
     project: "Network Security Compliance",
     environment: "Production",
     credentials: ["SSH Key", "API Token"],
@@ -504,6 +575,7 @@ export default function JobDetailsPage() {
   const [job, setJob] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showOnlyDrift, setShowOnlyDrift] = useState(false)
+  const [selectedDataCenter, setSelectedDataCenter] = useState("dc-gf1") // Default to GF1
 
   useEffect(() => {
     // Fetch job details
@@ -515,6 +587,12 @@ export default function JobDetailsPage() {
     }
 
     setJob(jobDetails)
+
+    // If this is a drift report for a single data center, set that as selected
+    if (jobDetails.reportType === "drift" && jobDetails.dataCenters.length === 1) {
+      setSelectedDataCenter(jobDetails.dataCenters[0].id)
+    }
+
     setLoading(false)
   }, [params.id, router])
 
@@ -529,8 +607,13 @@ export default function JobDetailsPage() {
     )
   }
 
-  // Filter data centers based on showOnlyDrift setting
-  const filteredDataCenters = showOnlyDrift ? job.dataCenters.filter((dc) => dc.status === "drifting") : job.dataCenters
+  // Get the selected data center object
+  const selectedDC = job.dataCenters.find((dc) => dc.id === selectedDataCenter) || job.dataCenters[0]
+
+  // Filter server groups based on showOnlyDrift setting
+  const filteredServerGroups = showOnlyDrift
+    ? selectedDC.serverGroups.filter((group) => group.status === "drifting")
+    : selectedDC.serverGroups
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -634,12 +717,20 @@ export default function JobDetailsPage() {
                           </div>
                         </>
                       ) : (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Servers:</span>
-                          <span className="font-medium">
-                            {job.driftSummary.driftingServers}/{job.driftSummary.totalServers}
-                          </span>
-                        </div>
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Server Groups:</span>
+                            <span className="font-medium">
+                              {job.driftSummary.driftingGroups}/{job.driftSummary.totalGroups}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Servers:</span>
+                            <span className="font-medium">
+                              {job.driftSummary.driftingServers}/{job.driftSummary.totalServers}
+                            </span>
+                          </div>
+                        </>
                       )}
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Rules:</span>
@@ -653,6 +744,12 @@ export default function JobDetailsPage() {
                       {job.reportType === "consistency" && (
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Drifting Centers:</span>
+                          <span className="font-medium text-amber-500">{job.driftSummary.driftingGroups}</span>
+                        </div>
+                      )}
+                      {job.reportType === "drift" && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Drifting Groups:</span>
                           <span className="font-medium text-amber-500">{job.driftSummary.driftingGroups}</span>
                         </div>
                       )}
@@ -777,13 +874,17 @@ export default function JobDetailsPage() {
                       {/* Map through servers by name to create pairs */}
                       {Array.from(
                         new Set([
-                          ...job.dataCenters[0].servers.map((s) => s.name),
-                          ...job.dataCenters[1].servers.map((s) => s.name),
+                          ...job.dataCenters[0].serverGroups.flatMap((g) => g.servers.map((s) => s.name)),
+                          ...job.dataCenters[1].serverGroups.flatMap((g) => g.servers.map((s) => s.name)),
                         ]),
                       )
                         .map((serverName) => {
-                          const gf1Server = job.dataCenters[0].servers.find((s) => s.name === serverName)
-                          const gf2Server = job.dataCenters[1].servers.find((s) => s.name === serverName)
+                          const gf1Server = job.dataCenters[0].serverGroups
+                            .flatMap((g) => g.servers)
+                            .find((s) => s.name === serverName)
+                          const gf2Server = job.dataCenters[1].serverGroups
+                            .flatMap((g) => g.servers)
+                            .find((s) => s.name === serverName)
 
                           // Skip if both servers are aligned and we're only showing drifting
                           if (
@@ -941,6 +1042,173 @@ export default function JobDetailsPage() {
                           )
                         })
                         .filter(Boolean)}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {/* Drift Analysis Tab */}
+          {job.reportType === "drift" && (
+            <TabsContent value="drift" className="space-y-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle>Server Drift Analysis</CardTitle>
+                    <CardDescription>Analyzing server groups within data center</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Select value={selectedDataCenter} onValueChange={setSelectedDataCenter}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select data center" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {job.dataCenters.map((dc) => (
+                          <SelectItem key={dc.id} value={dc.id}>
+                            {dc.name} Data Center
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center space-x-2">
+                      <Switch id="show-drift" checked={showOnlyDrift} onCheckedChange={setShowOnlyDrift} />
+                      <Label htmlFor="show-drift">Show only drifting</Label>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {!selectedDC ? (
+                    <div className="text-center py-8 text-muted-foreground">No data center selected</div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <Database className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <div className="font-medium">{selectedDC.name}</div>
+                              <div className="text-sm text-muted-foreground">{selectedDC.location}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            {getDriftStatusBadge(selectedDC.status)}
+                            <div className="text-sm">
+                              <span className="font-medium">{selectedDC.driftPercentage}%</span> drift
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <h3 className="text-lg font-medium mt-6 mb-4">Server Groups</h3>
+
+                      {filteredServerGroups.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No server groups with drift detected
+                        </div>
+                      ) : (
+                        filteredServerGroups.map((group) => (
+                          <Collapsible key={group.id} className="border rounded-lg mb-4">
+                            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50">
+                              <div className="flex items-center gap-3">
+                                <Server className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                  <div className="font-medium">{group.name}</div>
+                                  <div className="text-sm text-muted-foreground">{group.description}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="text-sm text-muted-foreground">
+                                  Template: <span className="font-medium">{group.template}</span>
+                                </div>
+                                {getDriftStatusBadge(group.status)}
+                                <div className="text-sm">
+                                  <span className="font-medium">{group.driftPercentage}%</span> drift
+                                </div>
+                                <ChevronDown className="h-4 w-4" />
+                              </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="p-4 pt-0 border-t">
+                                <h4 className="text-sm font-medium mb-3">Servers</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {group.servers
+                                    .filter((server) => !showOnlyDrift || server.status === "drifting")
+                                    .map((server) => (
+                                      <Collapsible key={server.id} className="border rounded-md">
+                                        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50">
+                                          <div className="flex items-center gap-3">
+                                            <Server className="h-4 w-4 text-muted-foreground" />
+                                            <div className="font-medium">{server.name}</div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            {getDriftStatusBadge(server.status)}
+                                            <ChevronDown className="h-4 w-4" />
+                                          </div>
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent>
+                                          {server.status === "aligned" ? (
+                                            <div className="p-3 pt-0 border-t bg-green-50 dark:bg-green-950/20">
+                                              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                                                <Check className="h-4 w-4" />
+                                                <span>All firewall rules are aligned with template</span>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <div className="p-3 pt-0 border-t">
+                                              <h5 className="text-sm font-medium mb-2">Drifting Rules</h5>
+                                              <div className="space-y-2">
+                                                <div className="border rounded-md overflow-hidden">
+                                                  <div className="grid grid-cols-6 gap-4 p-2 bg-muted text-xs font-medium">
+                                                    <div>Direction</div>
+                                                    <div>Port</div>
+                                                    <div>Protocol</div>
+                                                    <div>Source/Dest</div>
+                                                    <div>Action</div>
+                                                    <div>Description</div>
+                                                  </div>
+                                                  <div className="divide-y">
+                                                    {server.driftingRules?.map((ruleId) => {
+                                                      // Find the rule in either inbound or outbound
+                                                      const inboundRule = job.firewallRules.inbound.find(
+                                                        (r) => r.id === ruleId,
+                                                      )
+                                                      const outboundRule = job.firewallRules.outbound.find(
+                                                        (r) => r.id === ruleId,
+                                                      )
+                                                      const rule = inboundRule || outboundRule
+                                                      const direction = inboundRule ? "Inbound" : "Outbound"
+
+                                                      if (!rule) return null
+
+                                                      return (
+                                                        <div
+                                                          key={rule.id}
+                                                          className="grid grid-cols-6 gap-4 p-2 text-xs bg-amber-50 dark:bg-amber-950/20"
+                                                        >
+                                                          <div>{direction}</div>
+                                                          <div>{rule.port}</div>
+                                                          <div>{rule.protocol}</div>
+                                                          <div>{rule.source || rule.destination}</div>
+                                                          <div>{rule.action}</div>
+                                                          <div>{rule.description}</div>
+                                                        </div>
+                                                      )
+                                                    })}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </CollapsibleContent>
+                                      </Collapsible>
+                                    ))}
+                                </div>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        ))
+                      )}
 
                       <h3 className="text-lg font-medium mt-6 mb-4">Baseline Firewall Rules</h3>
                       <div className="space-y-4">
@@ -1012,199 +1280,6 @@ export default function JobDetailsPage() {
                           </CollapsibleContent>
                         </Collapsible>
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-
-          {/* Drift Analysis Tab */}
-          {job.reportType === "drift" && (
-            <TabsContent value="drift" className="space-y-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                  <div>
-                    <CardTitle>Server Drift Analysis</CardTitle>
-                    <CardDescription>Analyzing server drift within data center</CardDescription>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch id="show-drift" checked={showOnlyDrift} onCheckedChange={setShowOnlyDrift} />
-                    <Label htmlFor="show-drift">Show only drifting</Label>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {job.dataCenters.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">No data center selected</div>
-                  ) : (
-                    <div className="space-y-6">
-                      {job.dataCenters.map((dataCenter) => (
-                        <div key={dataCenter.id} className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <Database className="h-5 w-5 text-muted-foreground" />
-                              <div>
-                                <div className="font-medium">{dataCenter.name}</div>
-                                <div className="text-sm text-muted-foreground">{dataCenter.location}</div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              {getDriftStatusBadge(dataCenter.status)}
-                              <div className="text-sm">
-                                <span className="font-medium">{dataCenter.driftPercentage}%</span> drift
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mb-6">
-                            <h4 className="text-sm font-medium mb-3">Server Compliance</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {dataCenter.servers.map((server) => (
-                                <Collapsible key={server.id} className="border rounded-md">
-                                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50">
-                                    <div className="flex items-center gap-3">
-                                      <Server className="h-4 w-4 text-muted-foreground" />
-                                      <div className="font-medium">{server.name}</div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {getDriftStatusBadge(server.status)}
-                                      <ChevronDown className="h-4 w-4" />
-                                    </div>
-                                  </CollapsibleTrigger>
-                                  <CollapsibleContent>
-                                    {server.status === "aligned" ? (
-                                      <div className="p-3 pt-0 border-t bg-green-50 dark:bg-green-950/20">
-                                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                                          <Check className="h-4 w-4" />
-                                          <span>All firewall rules are aligned with baseline</span>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="p-3 pt-0 border-t">
-                                        <h5 className="text-sm font-medium mb-2">Drifting Rules</h5>
-                                        <div className="space-y-2">
-                                          <div className="border rounded-md overflow-hidden">
-                                            <div className="grid grid-cols-6 gap-4 p-2 bg-muted text-xs font-medium">
-                                              <div>Direction</div>
-                                              <div>Port</div>
-                                              <div>Protocol</div>
-                                              <div>Source/Dest</div>
-                                              <div>Action</div>
-                                              <div>Description</div>
-                                            </div>
-                                            <div className="divide-y">
-                                              {server.driftingRules?.map((ruleId) => {
-                                                // Find the rule in either inbound or outbound
-                                                const inboundRule = job.firewallRules.inbound.find(
-                                                  (r) => r.id === ruleId,
-                                                )
-                                                const outboundRule = job.firewallRules.outbound.find(
-                                                  (r) => r.id === ruleId,
-                                                )
-                                                const rule = inboundRule || outboundRule
-                                                const direction = inboundRule ? "Inbound" : "Outbound"
-
-                                                if (!rule) return null
-
-                                                return (
-                                                  <div
-                                                    key={rule.id}
-                                                    className="grid grid-cols-6 gap-4 p-2 text-xs bg-amber-50 dark:bg-amber-950/20"
-                                                  >
-                                                    <div>{direction}</div>
-                                                    <div>{rule.port}</div>
-                                                    <div>{rule.protocol}</div>
-                                                    <div>{rule.source || rule.destination}</div>
-                                                    <div>{rule.action}</div>
-                                                    <div>{rule.description}</div>
-                                                  </div>
-                                                )
-                                              })}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </CollapsibleContent>
-                                </Collapsible>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Baseline Firewall Rules</h4>
-                            <div className="space-y-4">
-                              <Collapsible className="border rounded-md">
-                                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50">
-                                  <div className="flex items-center gap-3">
-                                    <Shield className="h-4 w-4 text-muted-foreground" />
-                                    <div className="font-medium">Inbound Rules</div>
-                                  </div>
-                                  <ChevronDown className="h-4 w-4" />
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
-                                  <div className="p-3 pt-0 border-t">
-                                    <div className="border rounded-md overflow-hidden">
-                                      <div className="grid grid-cols-5 gap-4 p-2 bg-muted text-xs font-medium">
-                                        <div>Port</div>
-                                        <div>Protocol</div>
-                                        <div>Source</div>
-                                        <div>Action</div>
-                                        <div>Description</div>
-                                      </div>
-                                      <div className="divide-y">
-                                        {job.firewallRules.inbound.map((rule) => (
-                                          <div key={rule.id} className="grid grid-cols-5 gap-4 p-2 text-xs">
-                                            <div>{rule.port}</div>
-                                            <div>{rule.protocol}</div>
-                                            <div>{rule.source}</div>
-                                            <div>{rule.action}</div>
-                                            <div>{rule.description}</div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </CollapsibleContent>
-                              </Collapsible>
-
-                              <Collapsible className="border rounded-md">
-                                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50">
-                                  <div className="flex items-center gap-3">
-                                    <Shield className="h-4 w-4 text-muted-foreground" />
-                                    <div className="font-medium">Outbound Rules</div>
-                                  </div>
-                                  <ChevronDown className="h-4 w-4" />
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
-                                  <div className="p-3 pt-0 border-t">
-                                    <div className="border rounded-md overflow-hidden">
-                                      <div className="grid grid-cols-5 gap-4 p-2 bg-muted text-xs font-medium">
-                                        <div>Port</div>
-                                        <div>Protocol</div>
-                                        <div>Destination</div>
-                                        <div>Action</div>
-                                        <div>Description</div>
-                                      </div>
-                                      <div className="divide-y">
-                                        {job.firewallRules.outbound.map((rule) => (
-                                          <div key={rule.id} className="grid grid-cols-5 gap-4 p-2 text-xs">
-                                            <div>{rule.port}</div>
-                                            <div>{rule.protocol}</div>
-                                            <div>{rule.destination}</div>
-                                            <div>{rule.action}</div>
-                                            <div>{rule.description}</div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </CollapsibleContent>
-                              </Collapsible>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
                     </div>
                   )}
                 </CardContent>
