@@ -618,7 +618,7 @@ export default function JobDetailsPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
-        <h1 className="text-lg font-semibold">AWX Dashboard</h1>
+        <h1 className="text-lg font-semibold">Firewall Drift Dashboard</h1>
         <div className="ml-auto flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
             <Link href="/">
