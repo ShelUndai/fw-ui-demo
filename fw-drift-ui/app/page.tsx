@@ -45,10 +45,11 @@ import { Separator } from "@/components/ui/separator"
 // Initialize state variables outside the component
 const initialSearchTerm = ""
 const initialStatusFilter = "all"
+// Update the initialJobs array to follow the new naming conventions
 const initialJobs = [
   {
     id: 1,
-    name: "Firewall Rules Comparison - All DCs",
+    name: "WEB, DB - Default Firewall Template",
     template: "Default Firewall Template",
     status: "successful",
     started: "2025-04-21T14:30:00",
@@ -56,7 +57,8 @@ const initialJobs = [
     duration: "5m 22s",
     user: "admin",
     inventory: "All Data Centers",
-    dataCenters: ["East Coast DC", "West Coast DC", "Central DC", "European DC"],
+    dataCenters: ["GF1", "GF2"],
+    mnemonics: ["WEB", "DB"],
     reportType: "consistency",
     driftSummary: {
       totalGroups: 4,
@@ -66,7 +68,7 @@ const initialJobs = [
   },
   {
     id: 2,
-    name: "Firewall Rules Comparison - US DCs",
+    name: "AUTH - Default Firewall Template",
     template: "Default Firewall Template",
     status: "running",
     started: "2025-04-22T09:15:00",
@@ -74,7 +76,8 @@ const initialJobs = [
     duration: "Running",
     user: "system",
     inventory: "US Data Centers",
-    dataCenters: ["East Coast DC", "West Coast DC", "Central DC"],
+    dataCenters: ["GF1", "GF2"],
+    mnemonics: ["AUTH"],
     reportType: "consistency",
     driftSummary: {
       totalGroups: 3,
@@ -84,15 +87,16 @@ const initialJobs = [
   },
   {
     id: 3,
-    name: "East Coast DC Server Drift Check",
+    name: "WEB - PCI Compliance - GF1",
     template: "PCI Compliance",
     status: "failed",
     started: "2025-04-21T18:45:00",
     finished: "2025-04-21T18:46:12",
     duration: "1m 12s",
     user: "admin",
-    inventory: "East Coast DC",
-    dataCenters: ["East Coast DC"],
+    inventory: "GF1 Data Center",
+    dataCenters: ["GF1"],
+    mnemonics: ["WEB"],
     reportType: "drift",
     driftSummary: {
       totalServers: 8,
@@ -102,15 +106,16 @@ const initialJobs = [
   },
   {
     id: 4,
-    name: "Central DC Server Drift Analysis",
+    name: "DB - Default Firewall Template - GF1",
     template: "Default Firewall Template",
     status: "successful",
     started: "2025-04-21T11:20:00",
     finished: "2025-04-21T11:22:45",
     duration: "2m 45s",
     user: "devops",
-    inventory: "Central DC",
-    dataCenters: ["Central DC"],
+    inventory: "GF1 Data Center",
+    dataCenters: ["GF1"],
+    mnemonics: ["DB"],
     reportType: "drift",
     driftSummary: {
       totalServers: 6,
@@ -120,15 +125,16 @@ const initialJobs = [
   },
   {
     id: 5,
-    name: "European DC Firewall Drift Check",
+    name: "AUTH - DMZ Configuration - GF2",
     template: "DMZ Configuration",
     status: "canceled",
     started: "2025-04-21T16:10:00",
     finished: "2025-04-21T16:11:30",
     duration: "1m 30s",
     user: "jenkins",
-    inventory: "European DC",
-    dataCenters: ["European DC"],
+    inventory: "GF2 Data Center",
+    dataCenters: ["GF2"],
+    mnemonics: ["AUTH"],
     reportType: "drift",
     driftSummary: {
       totalServers: 5,
@@ -138,29 +144,31 @@ const initialJobs = [
   },
   {
     id: 6,
-    name: "West Coast DC Server Drift Check",
+    name: "WEB - Default Firewall Template - GF2",
     template: "Default Firewall Template",
     status: "pending",
     started: null,
     finished: null,
     duration: "Pending",
     user: "system",
-    inventory: "West Coast DC",
-    dataCenters: ["West Coast DC"],
+    inventory: "GF2 Data Center",
+    dataCenters: ["GF2"],
+    mnemonics: ["WEB"],
     reportType: "drift",
     driftSummary: null,
   },
   {
     id: 7,
-    name: "East vs West Consistency Check",
+    name: "WEB, DB - Default Firewall Template",
     template: "Default Firewall Template",
     status: "successful",
     started: "2025-04-21T00:01:00",
     finished: "2025-04-21T00:03:45",
     duration: "2m 45s",
     user: "system",
-    inventory: "East and West DCs",
-    dataCenters: ["East Coast DC", "West Coast DC"],
+    inventory: "All Data Centers",
+    dataCenters: ["GF1", "GF2"],
+    mnemonics: ["WEB", "DB"],
     reportType: "consistency",
     driftSummary: {
       totalGroups: 2,
@@ -170,15 +178,16 @@ const initialJobs = [
   },
   {
     id: 8,
-    name: "EU vs US Consistency Analysis",
+    name: "AUTH, WEB - PCI Compliance",
     template: "PCI Compliance",
     status: "failed",
     started: "2025-04-20T22:15:00",
     finished: "2025-04-20T22:15:48",
     duration: "48s",
     user: "admin",
-    inventory: "EU and US DCs",
-    dataCenters: ["European DC", "East Coast DC", "West Coast DC", "Central DC"],
+    inventory: "All Data Centers",
+    dataCenters: ["GF1", "GF2"],
+    mnemonics: ["AUTH", "WEB"],
     reportType: "consistency",
     driftSummary: {
       totalGroups: 4,
@@ -189,6 +198,7 @@ const initialJobs = [
 ]
 
 // Available data centers for selection
+// Update the availableDataCenters array to use GF1 and GF2 names consistently
 const availableDataCenters = [
   { id: "dc-gf1", name: "GF1", location: "Primary Data Center" },
   { id: "dc-gf2", name: "GF2", location: "Secondary Data Center" },
@@ -384,26 +394,34 @@ export default function Home() {
 
   // Generate job name based on report type and selected data centers
   const generateJobName = () => {
+    // Get selected data centers
     const selectedDCs = availableDataCenters.filter((dc) => newJob.dataCenters.includes(dc.id))
     const dcNames = selectedDCs.map((dc) => dc.name)
 
+    // Get selected mnemonics
+    const selectedMnemonics = appMnemonics.filter((m) => newJob.mnemonics.includes(m.id)).map((m) => m.name)
+
+    // Get selected template
+    const templateObj = availableTemplates.find((t) => t.id === newJob.templateId) || {
+      name: "Default Firewall Template",
+    }
+
+    if (selectedMnemonics.length === 0) {
+      return ""
+    }
+
+    const mnemonicsStr = selectedMnemonics.join(", ")
+
     if (newJob.reportType === "drift") {
+      // For drift reports: "<Mnemonic(s)> - <Rule Template> - <Data Center>"
       if (dcNames.length === 1) {
-        return `${dcNames[0]} Server Drift Check`
+        return `${mnemonicsStr} - ${templateObj.name} - ${dcNames[0]}`
       }
       return ""
     } else {
-      if (dcNames.length === 0) return ""
-      if (dcNames.length === 1) return `${dcNames[0]} Consistency Check`
-      if (dcNames.length === availableDataCenters.length) return "Firewall Rules Comparison - All DCs"
-      if (dcNames.length > 1) {
-        const isAllUS = !dcNames.includes("European DC")
-        if (isAllUS) return "Firewall Rules Comparison - US DCs"
-        if (dcNames.length === 2) return `${dcNames.join(" vs ")} Consistency Check`
-        return `${dcNames.join(", ")} Consistency Analysis`
-      }
+      // For consistency reports: "Mnemonic(s) - Rule Template"
+      return `${mnemonicsStr} - ${templateObj.name}`
     }
-    return ""
   }
 
   // Update the handleCreateJob function to include the new fields in validation
@@ -431,13 +449,11 @@ export default function Home() {
     let inventoryName = ""
 
     if (dcNames.length === 1) {
-      inventoryName = dcNames[0]
+      inventoryName = `${dcNames[0]} Data Center`
     } else if (dcNames.length === availableDataCenters.length) {
       inventoryName = "All Data Centers"
     } else if (dcNames.length > 1) {
-      // Check if all US or mix of regions
-      const isAllUS = !dcNames.includes("European DC")
-      inventoryName = isAllUS ? "US Data Centers" : dcNames.join(" and ")
+      inventoryName = "Multiple Data Centers"
     }
 
     // Find the template name
