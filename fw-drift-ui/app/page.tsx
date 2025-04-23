@@ -40,6 +40,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Separator } from "@/components/ui/separator"
 
 // Initialize state variables outside the component
 const initialSearchTerm = ""
@@ -193,6 +194,38 @@ const availableDataCenters = [
   { id: "dc-gf2", name: "GF2", location: "Secondary Data Center" },
 ]
 
+// Add the following mock data for app mnemonics after the availableDataCenters array
+const appMnemonics = [
+  {
+    id: "app-web",
+    name: "WEB",
+    description: "Web Application",
+    serverGroups: [
+      { id: "sg-web-frontend", name: "Frontend Servers", description: "Customer-facing web servers" },
+      { id: "sg-web-api", name: "API Servers", description: "Backend API servers" },
+      { id: "sg-web-static", name: "Static Content", description: "Static content servers" },
+    ],
+  },
+  {
+    id: "app-db",
+    name: "DB",
+    description: "Database Systems",
+    serverGroups: [
+      { id: "sg-db-primary", name: "Primary DB", description: "Primary database servers" },
+      { id: "sg-db-replica", name: "Replica DB", description: "Database replica servers" },
+    ],
+  },
+  {
+    id: "app-auth",
+    name: "AUTH",
+    description: "Authentication Services",
+    serverGroups: [
+      { id: "sg-auth-main", name: "Auth Servers", description: "Main authentication servers" },
+      { id: "sg-auth-mfa", name: "MFA Services", description: "Multi-factor authentication services" },
+    ],
+  },
+]
+
 // Available templates for dropdown
 const availableTemplates = [
   { id: "template-1", name: "Default Firewall Template" },
@@ -200,11 +233,14 @@ const availableTemplates = [
   { id: "template-3", name: "DMZ Configuration" },
 ]
 
+// Update the initialNewJob object to include mnemonics and serverGroups
 const initialNewJob = {
   name: "",
   templateId: "template-1",
   description: "",
   dataCenters: [],
+  mnemonics: [],
+  serverGroups: [],
   reportType: "consistency",
 }
 const initialIsDialogOpen = false
@@ -370,10 +406,10 @@ export default function Home() {
     return ""
   }
 
-  // Handle create job
+  // Update the handleCreateJob function to include the new fields in validation
   const handleCreateJob = () => {
     // Validate form
-    if (!newJob.name || newJob.dataCenters.length === 0) {
+    if (!newJob.name || newJob.dataCenters.length === 0 || newJob.mnemonics.length === 0) {
       return
     }
 
@@ -409,6 +445,9 @@ export default function Home() {
       name: "Default Firewall Template",
     }
 
+    // Get selected mnemonics
+    const selectedMnemonics = appMnemonics.filter((m) => newJob.mnemonics.includes(m.id)).map((m) => m.name)
+
     // Create new job with current timestamp
     const now = new Date().toISOString()
     const newJobEntry = {
@@ -422,6 +461,8 @@ export default function Home() {
       user: "admin", // Using a default user
       inventory: inventoryName,
       dataCenters: dcNames,
+      mnemonics: selectedMnemonics,
+      serverGroups: newJob.serverGroups,
       reportType: newJob.reportType,
       driftSummary:
         newJob.reportType === "consistency"
@@ -446,11 +487,57 @@ export default function Home() {
       templateId: "template-1",
       description: "",
       dataCenters: [],
+      mnemonics: [],
+      serverGroups: [],
       reportType: "consistency",
     })
 
     // Close dialog
     setIsDialogOpen(false)
+  }
+
+  // Add a new function to handle mnemonic selection
+  const handleMnemonicChange = (id) => {
+    setNewJob((prev) => {
+      const isSelected = prev.mnemonics.includes(id)
+
+      if (isSelected) {
+        // Remove the mnemonic and any server groups that belong to it
+        const mnemonic = appMnemonics.find((m) => m.id === id)
+        const mnemonicServerGroupIds = mnemonic ? mnemonic.serverGroups.map((sg) => sg.id) : []
+
+        return {
+          ...prev,
+          mnemonics: prev.mnemonics.filter((m) => m !== id),
+          serverGroups: prev.serverGroups.filter((sg) => !mnemonicServerGroupIds.includes(sg)),
+        }
+      } else {
+        // Add the mnemonic
+        return {
+          ...prev,
+          mnemonics: [...prev.mnemonics, id],
+        }
+      }
+    })
+  }
+
+  // Add a new function to handle server group selection
+  const handleServerGroupChange = (id) => {
+    setNewJob((prev) => {
+      const isSelected = prev.serverGroups.includes(id)
+
+      if (isSelected) {
+        return {
+          ...prev,
+          serverGroups: prev.serverGroups.filter((sg) => sg !== id),
+        }
+      } else {
+        return {
+          ...prev,
+          serverGroups: [...prev.serverGroups, id],
+        }
+      }
+    })
   }
 
   return (
@@ -483,13 +570,21 @@ export default function Home() {
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
-                  onClick={() => setNewJob({ ...initialNewJob, reportType: "drift", dataCenters: ["dc-gf1"] })}
+                  onClick={() =>
+                    setNewJob({
+                      ...initialNewJob,
+                      reportType: "drift",
+                      dataCenters: ["dc-gf1"],
+                      mnemonics: [],
+                      serverGroups: [],
+                    })
+                  }
                 >
                   <Server className="mr-2 h-4 w-4" />
                   Generate Drift Report
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[525px]">
+              <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   {newJob.reportType === "drift" ? "Generate Drift Report" : "Generate Consistency Report"}
                 </DialogHeader>
@@ -533,6 +628,69 @@ export default function Home() {
                       )}
                     </div>
                   </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label className="text-right pt-2">App Mnemonics</Label>
+                    <div className="col-span-3 space-y-3">
+                      {appMnemonics.map((mnemonic) => (
+                        <div key={mnemonic.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`mnemonic-${mnemonic.id}`}
+                            checked={newJob.mnemonics.includes(mnemonic.id)}
+                            onCheckedChange={() => handleMnemonicChange(mnemonic.id)}
+                          />
+                          <Label htmlFor={`mnemonic-${mnemonic.id}`} className="flex items-center gap-2">
+                            <Server className="h-4 w-4 text-muted-foreground" />
+                            <span>{mnemonic.name}</span>
+                            <span className="text-xs text-muted-foreground">({mnemonic.description})</span>
+                          </Label>
+                        </div>
+                      ))}
+                      {newJob.mnemonics.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Select at least one app mnemonic to analyze</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {newJob.mnemonics.length > 0 && (
+                    <div className="grid grid-cols-4 items-start gap-4">
+                      <Label className="text-right pt-2">Server Groups</Label>
+                      <div className="col-span-3 space-y-4">
+                        {newJob.mnemonics.map((mnemonicId) => {
+                          const mnemonic = appMnemonics.find((m) => m.id === mnemonicId)
+                          if (!mnemonic) return null
+
+                          return (
+                            <div key={mnemonic.id} className="space-y-2">
+                              <h4 className="text-sm font-medium">{mnemonic.name}</h4>
+                              <div className="ml-4 space-y-2">
+                                {mnemonic.serverGroups.map((group) => (
+                                  <div key={group.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`group-${group.id}`}
+                                      checked={newJob.serverGroups.includes(group.id)}
+                                      onCheckedChange={() => handleServerGroupChange(group.id)}
+                                    />
+                                    <Label htmlFor={`group-${group.id}`} className="flex items-center gap-2">
+                                      <span>{group.name}</span>
+                                      <span className="text-xs text-muted-foreground">({group.description})</span>
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {newJob.serverGroups.length === 0 && (
+                          <p className="text-sm text-muted-foreground">Select at least one server group to analyze</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator />
 
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="job-template" className="text-right">
@@ -605,6 +763,8 @@ export default function Home() {
                     disabled={
                       !newJob.name ||
                       newJob.dataCenters.length === 0 ||
+                      newJob.mnemonics.length === 0 ||
+                      newJob.serverGroups.length === 0 ||
                       (newJob.reportType === "consistency" && newJob.dataCenters.length < 2)
                     }
                   >
@@ -617,14 +777,20 @@ export default function Home() {
               <DialogTrigger asChild>
                 <Button
                   onClick={() =>
-                    setNewJob({ ...initialNewJob, reportType: "consistency", dataCenters: ["dc-gf1", "dc-gf2"] })
+                    setNewJob({
+                      ...initialNewJob,
+                      reportType: "consistency",
+                      dataCenters: ["dc-gf1", "dc-gf2"],
+                      mnemonics: [],
+                      serverGroups: [],
+                    })
                   }
                 >
                   <Database className="mr-2 h-4 w-4" />
                   Generate Consistency Report
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[525px]">
+              <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   {newJob.reportType === "drift" ? "Generate Drift Report" : "Generate Consistency Report"}
                 </DialogHeader>
@@ -668,6 +834,69 @@ export default function Home() {
                       )}
                     </div>
                   </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label className="text-right pt-2">App Mnemonics</Label>
+                    <div className="col-span-3 space-y-3">
+                      {appMnemonics.map((mnemonic) => (
+                        <div key={mnemonic.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`mnemonic-${mnemonic.id}`}
+                            checked={newJob.mnemonics.includes(mnemonic.id)}
+                            onCheckedChange={() => handleMnemonicChange(mnemonic.id)}
+                          />
+                          <Label htmlFor={`mnemonic-${mnemonic.id}`} className="flex items-center gap-2">
+                            <Server className="h-4 w-4 text-muted-foreground" />
+                            <span>{mnemonic.name}</span>
+                            <span className="text-xs text-muted-foreground">({mnemonic.description})</span>
+                          </Label>
+                        </div>
+                      ))}
+                      {newJob.mnemonics.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Select at least one app mnemonic to analyze</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {newJob.mnemonics.length > 0 && (
+                    <div className="grid grid-cols-4 items-start gap-4">
+                      <Label className="text-right pt-2">Server Groups</Label>
+                      <div className="col-span-3 space-y-4">
+                        {newJob.mnemonics.map((mnemonicId) => {
+                          const mnemonic = appMnemonics.find((m) => m.id === mnemonicId)
+                          if (!mnemonic) return null
+
+                          return (
+                            <div key={mnemonic.id} className="space-y-2">
+                              <h4 className="text-sm font-medium">{mnemonic.name}</h4>
+                              <div className="ml-4 space-y-2">
+                                {mnemonic.serverGroups.map((group) => (
+                                  <div key={group.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`group-${group.id}`}
+                                      checked={newJob.serverGroups.includes(group.id)}
+                                      onCheckedChange={() => handleServerGroupChange(group.id)}
+                                    />
+                                    <Label htmlFor={`group-${group.id}`} className="flex items-center gap-2">
+                                      <span>{group.name}</span>
+                                      <span className="text-xs text-muted-foreground">({group.description})</span>
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {newJob.serverGroups.length === 0 && (
+                          <p className="text-sm text-muted-foreground">Select at least one server group to analyze</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator />
 
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="job-template" className="text-right">
@@ -740,6 +969,8 @@ export default function Home() {
                     disabled={
                       !newJob.name ||
                       newJob.dataCenters.length === 0 ||
+                      newJob.mnemonics.length === 0 ||
+                      newJob.serverGroups.length === 0 ||
                       (newJob.reportType === "consistency" && newJob.dataCenters.length < 2)
                     }
                   >
