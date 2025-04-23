@@ -564,7 +564,7 @@ export default function Home() {
           <TabsList className="ml-auto">
             <TabsTrigger value="jobs">Jobs</TabsTrigger>
             <TabsTrigger value="templates" asChild>
-              <Link href="/templates">Templates</Link>
+              <Link href="/templates">Firewall Rule Templates</Link>
             </TabsTrigger>
             <TabsTrigger value="inventories" asChild>
               <Link href="/inventories">Inventories</Link>
@@ -578,7 +578,7 @@ export default function Home() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Firewall Compliance Jobs</h2>
+            <h2 className="text-2xl font-bold tracking-tight">Drift Reporting</h2>
             <p className="text-muted-foreground">Compare firewall rules across data centers</p>
           </div>
           <div className="flex items-center gap-2">
@@ -999,7 +999,7 @@ export default function Home() {
         </div>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle>Firewall Compliance Jobs</CardTitle>
+            <CardTitle>Report History</CardTitle>
             <CardDescription>Recent firewall rule analysis jobs</CardDescription>
           </CardHeader>
           <CardContent>
