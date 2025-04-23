@@ -189,10 +189,8 @@ const initialJobs = [
 
 // Available data centers for selection
 const availableDataCenters = [
-  { id: "dc-east", name: "East Coast DC", location: "Virginia" },
-  { id: "dc-west", name: "West Coast DC", location: "California" },
-  { id: "dc-central", name: "Central DC", location: "Texas" },
-  { id: "dc-eu", name: "European DC", location: "Ireland" },
+  { id: "dc-gf1", name: "GF1", location: "Primary Data Center" },
+  { id: "dc-gf2", name: "GF2", location: "Secondary Data Center" },
 ]
 
 // Available templates for dropdown
@@ -297,7 +295,10 @@ export default function Home() {
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter)
   const [reportTypeFilter, setReportTypeFilter] = useState("all")
   const [jobs, setJobs] = useState(initialJobs)
-  const [newJob, setNewJob] = useState(initialNewJob)
+  const [newJob, setNewJob] = useState({
+    ...initialNewJob,
+    dataCenters: initialNewJob.reportType === "drift" ? ["dc-gf1"] : ["dc-gf1", "dc-gf2"],
+  })
   const [isDialogOpen, setIsDialogOpen] = useState(initialIsDialogOpen)
 
   // Filter jobs based on search term, status filter, and report type filter
@@ -318,17 +319,28 @@ export default function Home() {
   // Handle data center selection
   const handleDataCenterChange = (id) => {
     setNewJob((prev) => {
+      // For consistency reports, both data centers should always be selected
+      if (prev.reportType === "consistency") {
+        return prev
+      }
+
+      // For drift reports, only allow one data center selection
       const isSelected = prev.dataCenters.includes(id)
 
       if (isSelected) {
+        // Don't allow deselecting the last data center
+        if (prev.dataCenters.length <= 1) {
+          return prev
+        }
         return {
           ...prev,
           dataCenters: prev.dataCenters.filter((dcId) => dcId !== id),
         }
       } else {
+        // For drift reports, replace the selection instead of adding
         return {
           ...prev,
-          dataCenters: [...prev.dataCenters, id],
+          dataCenters: [id],
         }
       }
     })
@@ -444,7 +456,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
-        <h1 className="text-lg font-semibold">AWX Dashboard</h1>
+        <h1 className="text-lg font-semibold">Firewall Drift Dashboard</h1>
         <Tabs defaultValue="jobs" className="flex-1">
           <TabsList className="ml-auto">
             <TabsTrigger value="jobs">Jobs</TabsTrigger>
@@ -469,7 +481,10 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" onClick={() => setNewJob({ ...initialNewJob, reportType: "drift" })}>
+                <Button
+                  variant="outline"
+                  onClick={() => setNewJob({ ...initialNewJob, reportType: "drift", dataCenters: ["dc-gf1"] })}
+                >
                   <Server className="mr-2 h-4 w-4" />
                   Generate Drift Report
                 </Button>
@@ -496,9 +511,10 @@ export default function Home() {
                             checked={newJob.dataCenters.includes(dc.id)}
                             onCheckedChange={() => handleDataCenterChange(dc.id)}
                             disabled={
-                              newJob.reportType === "drift" &&
-                              newJob.dataCenters.length > 0 &&
-                              !newJob.dataCenters.includes(dc.id)
+                              (newJob.reportType === "drift" &&
+                                newJob.dataCenters.length > 0 &&
+                                !newJob.dataCenters.includes(dc.id)) ||
+                              newJob.reportType === "consistency"
                             }
                           />
                           <Label htmlFor={`dc-${dc.id}`} className="flex items-center gap-2">
@@ -599,7 +615,11 @@ export default function Home() {
             </Dialog>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={() => setNewJob({ ...initialNewJob, reportType: "consistency" })}>
+                <Button
+                  onClick={() =>
+                    setNewJob({ ...initialNewJob, reportType: "consistency", dataCenters: ["dc-gf1", "dc-gf2"] })
+                  }
+                >
                   <Database className="mr-2 h-4 w-4" />
                   Generate Consistency Report
                 </Button>
@@ -626,9 +646,10 @@ export default function Home() {
                             checked={newJob.dataCenters.includes(dc.id)}
                             onCheckedChange={() => handleDataCenterChange(dc.id)}
                             disabled={
-                              newJob.reportType === "drift" &&
-                              newJob.dataCenters.length > 0 &&
-                              !newJob.dataCenters.includes(dc.id)
+                              (newJob.reportType === "drift" &&
+                                newJob.dataCenters.length > 0 &&
+                                !newJob.dataCenters.includes(dc.id)) ||
+                              newJob.reportType === "consistency"
                             }
                           />
                           <Label htmlFor={`dc-${dc.id}`} className="flex items-center gap-2">
