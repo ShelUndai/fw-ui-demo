@@ -502,7 +502,7 @@ export default function TemplatesPage() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
-        <h1 className="text-lg font-semibold">AWX Dashboard</h1>
+        <h1 className="text-lg font-semibold">Firewall Drift Dashboard</h1>
         <Tabs defaultValue="templates" className="flex-1">
           <TabsList className="ml-auto">
             <TabsTrigger value="jobs" asChild>
