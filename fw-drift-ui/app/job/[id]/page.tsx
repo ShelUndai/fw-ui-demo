@@ -1325,11 +1325,11 @@ export default function JobDetailsPage() {
                             </Collapsible>
                           </div>
                         </div>
-                      )
-                    }\
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                      )}\
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               {/* Details Tab */}
               <TabsContent value="details" className="space-y-4">
@@ -1503,4 +1503,4 @@ export default function JobDetailsPage() {
           </main>
         </div>
       )
-    }
+}
