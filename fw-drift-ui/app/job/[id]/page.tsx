@@ -611,9 +611,12 @@ export default function JobDetailsPage() {
   const selectedDC = job.dataCenters.find((dc) => dc.id === selectedDataCenter) || job.dataCenters[0]
 
   // Filter server groups based on showOnlyDrift setting
-  const filteredServerGroups = showOnlyDrift
-    ? selectedDC.serverGroups.filter((group) => group.status === "drifting")
-    : selectedDC.serverGroups
+  const filteredServerGroups =
+    selectedDC && selectedDC.serverGroups
+      ? showOnlyDrift
+        ? selectedDC.serverGroups.filter((group) => group.status === "drifting")
+        : selectedDC.serverGroups
+      : []
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -1131,7 +1134,7 @@ export default function JobDetailsPage() {
                             <CollapsibleContent>
                               <div className="p-4 pt-0 border-t">
                                 <h4 className="text-sm font-medium mb-3">Servers</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="flex flex-col space-y-4">
                                   {group.servers
                                     .filter((server) => !showOnlyDrift || server.status === "drifting")
                                     .map((server) => (
@@ -1158,43 +1161,55 @@ export default function JobDetailsPage() {
                                             <div className="p-3 pt-0 border-t">
                                               <h5 className="text-sm font-medium mb-2">Drifting Rules</h5>
                                               <div className="space-y-2">
-                                                <div className="border rounded-md overflow-hidden">
-                                                  <div className="grid grid-cols-6 gap-4 p-2 bg-muted text-xs font-medium">
-                                                    <div>Direction</div>
-                                                    <div>Port</div>
-                                                    <div>Protocol</div>
-                                                    <div>Source/Dest</div>
-                                                    <div>Action</div>
-                                                    <div>Description</div>
-                                                  </div>
-                                                  <div className="divide-y">
-                                                    {server.driftingRules?.map((ruleId) => {
-                                                      // Find the rule in either inbound or outbound
-                                                      const inboundRule = job.firewallRules.inbound.find(
-                                                        (r) => r.id === ruleId,
-                                                      )
-                                                      const outboundRule = job.firewallRules.outbound.find(
-                                                        (r) => r.id === ruleId,
-                                                      )
-                                                      const rule = inboundRule || outboundRule
-                                                      const direction = inboundRule ? "Inbound" : "Outbound"
+                                                <div className="border rounded-md overflow-x-auto">
+                                                  <div className="min-w-[800px]">
+                                                    <div className="grid grid-cols-6 gap-4 p-2 bg-muted text-xs font-medium">
+                                                      <div>Direction</div>
+                                                      <div>Port</div>
+                                                      <div>Protocol</div>
+                                                      <div className="col-span-1">Source/Dest</div>
+                                                      <div>Action</div>
+                                                      <div className="col-span-1">Description</div>
+                                                    </div>
+                                                    <div className="divide-y">
+                                                      {server.driftingRules?.map((ruleId) => {
+                                                        // Find the rule in either inbound or outbound
+                                                        const inboundRule = job.firewallRules.inbound.find(
+                                                          (r) => r.id === ruleId,
+                                                        )
+                                                        const outboundRule = job.firewallRules.outbound.find(
+                                                          (r) => r.id === ruleId,
+                                                        )
+                                                        const rule = inboundRule || outboundRule
+                                                        const direction = inboundRule ? "Inbound" : "Outbound"
 
-                                                      if (!rule) return null
+                                                        if (!rule) return null
 
-                                                      return (
-                                                        <div
-                                                          key={rule.id}
-                                                          className="grid grid-cols-6 gap-4 p-2 text-xs bg-amber-50 dark:bg-amber-950/20"
-                                                        >
-                                                          <div>{direction}</div>
-                                                          <div>{rule.port}</div>
-                                                          <div>{rule.protocol}</div>
-                                                          <div>{rule.source || rule.destination}</div>
-                                                          <div>{rule.action}</div>
-                                                          <div>{rule.description}</div>
-                                                        </div>
-                                                      )
-                                                    })}
+                                                        return (
+                                                          <div
+                                                            key={rule.id}
+                                                            className="grid grid-cols-6 gap-4 p-2 text-xs bg-amber-50 dark:bg-amber-950/20"
+                                                          >
+                                                            <div>{direction}</div>
+                                                            <div>{rule.port}</div>
+                                                            <div>{rule.protocol}</div>
+                                                            <div
+                                                              className="col-span-1 truncate"
+                                                              title={rule.source || rule.destination}
+                                                            >
+                                                              {rule.source || rule.destination}
+                                                            </div>
+                                                            <div>{rule.action}</div>
+                                                            <div
+                                                              className="col-span-1 truncate"
+                                                              title={rule.description}
+                                                            >
+                                                              {rule.description}
+                                                            </div>
+                                                          </div>
+                                                        )
+                                                      })}
+                                                    </div>
                                                   </div>
                                                 </div>
                                               </div>
@@ -1222,24 +1237,26 @@ export default function JobDetailsPage() {
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             <div className="p-3 pt-0 border-t">
-                              <div className="border rounded-md overflow-hidden">
-                                <div className="grid grid-cols-5 gap-4 p-2 bg-muted text-xs font-medium">
-                                  <div>Port</div>
-                                  <div>Protocol</div>
-                                  <div>Source</div>
-                                  <div>Action</div>
-                                  <div>Description</div>
-                                </div>
-                                <div className="divide-y">
-                                  {job.firewallRules.inbound.map((rule) => (
-                                    <div key={rule.id} className="grid grid-cols-5 gap-4 p-2 text-xs">
-                                      <div>{rule.port}</div>
-                                      <div>{rule.protocol}</div>
-                                      <div>{rule.source}</div>
-                                      <div>{rule.action}</div>
-                                      <div>{rule.description}</div>
-                                    </div>
-                                  ))}
+                              <div className="border rounded-md overflow-x-auto">
+                                <div className="min-w-[700px]">
+                                  <div className="grid grid-cols-5 gap-4 p-2 bg-muted text-xs font-medium">
+                                    <div>Port</div>
+                                    <div>Protocol</div>
+                                    <div>Source</div>
+                                    <div>Action</div>
+                                    <div>Description</div>
+                                  </div>
+                                  <div className="divide-y">
+                                    {job.firewallRules.inbound.map((rule) => (
+                                      <div key={rule.id} className="grid grid-cols-5 gap-4 p-2 text-xs">
+                                        <div>{rule.port}</div>
+                                        <div>{rule.protocol}</div>
+                                        <div>{rule.source}</div>
+                                        <div>{rule.action}</div>
+                                        <div>{rule.description}</div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1256,24 +1273,26 @@ export default function JobDetailsPage() {
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             <div className="p-3 pt-0 border-t">
-                              <div className="border rounded-md overflow-hidden">
-                                <div className="grid grid-cols-5 gap-4 p-2 bg-muted text-xs font-medium">
-                                  <div>Port</div>
-                                  <div>Protocol</div>
-                                  <div>Destination</div>
-                                  <div>Action</div>
-                                  <div>Description</div>
-                                </div>
-                                <div className="divide-y">
-                                  {job.firewallRules.outbound.map((rule) => (
-                                    <div key={rule.id} className="grid grid-cols-5 gap-4 p-2 text-xs">
-                                      <div>{rule.port}</div>
-                                      <div>{rule.protocol}</div>
-                                      <div>{rule.destination}</div>
-                                      <div>{rule.action}</div>
-                                      <div>{rule.description}</div>
-                                    </div>
-                                  ))}
+                              <div className="border rounded-md overflow-x-auto">
+                                <div className="min-w-[700px]">
+                                  <div className="grid grid-cols-5 gap-4 p-2 bg-muted text-xs font-medium">
+                                    <div>Port</div>
+                                    <div>Protocol</div>
+                                    <div>Destination</div>
+                                    <div>Action</div>
+                                    <div>Description</div>
+                                  </div>
+                                  <div className="divide-y">
+                                    {job.firewallRules.outbound.map((rule) => (
+                                      <div key={rule.id} className="grid grid-cols-5 gap-4 p-2 text-xs">
+                                        <div>{rule.port}</div>
+                                        <div>{rule.protocol}</div>
+                                        <div>{rule.destination}</div>
+                                        <div>{rule.action}</div>
+                                        <div>{rule.description}</div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
                             </div>
