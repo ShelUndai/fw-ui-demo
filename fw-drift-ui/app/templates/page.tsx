@@ -2,1010 +2,1423 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
-  ArrowDown,
-  ArrowUp,
+  AlertCircle,
+  Calendar,
+  Check,
   ChevronDown,
-  Copy,
+  Clock,
+  Database,
   Download,
-  Edit,
+  Filter,
+  LogOut,
   MoreHorizontal,
-  Plus,
+  RefreshCw,
   Search,
   Shield,
-  Trash2,
+  Server,
+  X,
 } from "lucide-react"
+import { format, parseISO } from "date-fns"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Separator } from "@/components/ui/separator"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-// Initial template data
-const initialTemplates = [
+// Initialize state variables outside the component
+const initialSearchTerm = ""
+const initialStatusFilter = "all"
+// Update the initialJobs array to follow the new naming conventions
+const initialJobs = [
   {
-    id: "template-1",
-    name: "Default Firewall Template",
-    description: "Standard firewall configuration for all data centers",
-    lastUpdated: "2025-04-15T10:30:00",
-    updatedBy: "admin",
-    isDefault: true,
-    segments: [
-      {
-        id: "segment-1",
-        name: "Basic Security",
-        description: "Essential security rules for all environments",
-        rules: [
-          {
-            id: "rule-1",
-            direction: "inbound",
-            port: 22,
-            protocol: "TCP",
-            source: "10.0.0.0/8",
-            action: "ALLOW",
-            description: "SSH Access",
-          },
-          {
-            id: "rule-2",
-            direction: "inbound",
-            port: 443,
-            protocol: "TCP",
-            source: "0.0.0.0/0",
-            action: "ALLOW",
-            description: "HTTPS",
-          },
-          {
-            id: "rule-3",
-            direction: "outbound",
-            port: "Any",
-            protocol: "Any",
-            destination: "0.0.0.0/0",
-            action: "ALLOW",
-            description: "All outbound traffic",
-          },
-        ],
-      },
-      {
-        id: "segment-2",
-        name: "Production Services",
-        description: "Rules for production services",
-        rules: [
-          {
-            id: "rule-4",
-            direction: "inbound",
-            port: 80,
-            protocol: "TCP",
-            source: "0.0.0.0/0",
-            action: "ALLOW",
-            description: "HTTP",
-          },
-          {
-            id: "rule-5",
-            direction: "inbound",
-            port: 3389,
-            protocol: "TCP",
-            source: "10.0.0.0/8",
-            action: "ALLOW",
-            description: "RDP Access",
-          },
-        ],
-      },
+    id: 1,
+    name: "WEB, DB - Default Firewall Template",
+    template: "Default Firewall Template",
+    status: "successful",
+    started: "2025-04-21T14:30:00",
+    finished: "2025-04-21T14:35:22",
+    duration: "5m 22s",
+    user: "admin",
+    inventory: "All Data Centers",
+    dataCenters: ["GF1", "GF2"],
+    mnemonics: ["WEB", "DB"],
+    reportType: "consistency",
+    driftSummary: {
+      totalGroups: 4,
+      driftingGroups: 3,
+      complianceScore: 88,
+    },
+  },
+  {
+    id: 2,
+    name: "WEB - PCI Compliance - GF1",
+    template: "PCI Compliance",
+    status: "failed",
+    started: "2025-04-21T18:45:00",
+    finished: "2025-04-21T18:46:12",
+    duration: "1m 12s",
+    user: "admin",
+    inventory: "GF1 Data Center",
+    dataCenters: ["GF1"],
+    mnemonics: ["WEB"],
+    reportType: "drift",
+    driftSummary: {
+      totalServers: 8,
+      driftingServers: 3,
+      complianceScore: 82,
+    },
+  },
+]
+
+// Available data centers for selection
+const availableDataCenters = [
+  { id: "dc-gf1", name: "GF1", location: "Primary Data Center" },
+  { id: "dc-gf2", name: "GF2", location: "Secondary Data Center" },
+]
+
+// Add the following mock data for app mnemonics after the availableDataCenters array
+const appMnemonics = [
+  {
+    id: "app-web",
+    name: "WEB",
+    description: "Web Application",
+    serverGroups: [
+      { id: "sg-web-frontend", name: "Frontend Servers", description: "Customer-facing web servers" },
+      { id: "sg-web-api", name: "API Servers", description: "Backend API servers" },
+      { id: "sg-web-static", name: "Static Content", description: "Static content servers" },
     ],
   },
   {
-    id: "template-2",
-    name: "PCI Compliance",
-    description: "Firewall rules for PCI DSS compliance",
-    lastUpdated: "2025-04-10T16:45:00",
-    updatedBy: "security",
-    isDefault: false,
-    segments: [
-      {
-        id: "segment-3",
-        name: "PCI Basic Security",
-        description: "Basic security for PCI compliance",
-        rules: [
-          {
-            id: "rule-6",
-            direction: "inbound",
-            port: 22,
-            protocol: "TCP",
-            source: "10.0.0.0/8",
-            action: "ALLOW",
-            description: "SSH Access - Limited",
-          },
-          {
-            id: "rule-7",
-            direction: "inbound",
-            port: 443,
-            protocol: "TCP",
-            source: "0.0.0.0/0",
-            action: "ALLOW",
-            description: "HTTPS",
-          },
-        ],
-      },
-      {
-        id: "segment-4",
-        name: "PCI Restrictions",
-        description: "Required restrictions for PCI compliance",
-        rules: [
-          {
-            id: "rule-8",
-            direction: "outbound",
-            port: 25,
-            protocol: "TCP",
-            destination: "0.0.0.0/0",
-            action: "DENY",
-            description: "Block SMTP",
-          },
-          {
-            id: "rule-9",
-            direction: "inbound",
-            port: 1433,
-            protocol: "TCP",
-            source: "10.0.0.0/8",
-            action: "ALLOW",
-            description: "SQL Server",
-          },
-        ],
-      },
+    id: "app-db",
+    name: "DB",
+    description: "Database Systems",
+    serverGroups: [
+      { id: "sg-db-primary", name: "Primary DB", description: "Primary database servers" },
+      { id: "sg-db-replica", name: "Replica DB", description: "Database replica servers" },
     ],
   },
   {
-    id: "template-3",
-    name: "DMZ Configuration",
-    description: "Firewall rules for DMZ networks",
-    lastUpdated: "2025-04-05T09:15:00",
-    updatedBy: "network",
-    isDefault: false,
-    segments: [
-      {
-        id: "segment-5",
-        name: "DMZ Access",
-        description: "Rules for DMZ access",
-        rules: [
-          {
-            id: "rule-10",
-            direction: "inbound",
-            port: 80,
-            protocol: "TCP",
-            source: "0.0.0.0/0",
-            action: "ALLOW",
-            description: "HTTP",
-          },
-          {
-            id: "rule-11",
-            direction: "inbound",
-            port: 443,
-            protocol: "TCP",
-            source: "0.0.0.0/0",
-            action: "ALLOW",
-            description: "HTTPS",
-          },
-        ],
-      },
-      {
-        id: "segment-6",
-        name: "DMZ Restrictions",
-        description: "Security restrictions for DMZ",
-        rules: [
-          {
-            id: "rule-12",
-            direction: "outbound",
-            port: 3389,
-            protocol: "TCP",
-            destination: "10.0.0.0/8",
-            action: "DENY",
-            description: "Block RDP to internal",
-          },
-          {
-            id: "rule-13",
-            direction: "outbound",
-            port: 22,
-            protocol: "TCP",
-            destination: "10.0.0.0/8",
-            action: "DENY",
-            description: "Block SSH to internal",
-          },
-        ],
-      },
+    id: "app-auth",
+    name: "AUTH",
+    description: "Authentication Services",
+    serverGroups: [
+      { id: "sg-auth-main", name: "Auth Servers", description: "Main authentication servers" },
+      { id: "sg-auth-mfa", name: "MFA Services", description: "Multi-factor authentication services" },
     ],
   },
 ]
 
-// Protocol options
-const protocolOptions = ["TCP", "UDP", "ICMP", "Any"]
+// Available templates for dropdown
+const availableTemplates = [
+  { id: "template-1", name: "Default Firewall Template" },
+  { id: "template-2", name: "PCI Compliance" },
+  { id: "template-3", name: "DMZ Configuration" },
+]
 
-// Action options
-const actionOptions = ["ALLOW", "DENY", "REJECT"]
+// Add the environment options after the availableTemplates array
+const platoEnvironments = [
+  { id: "dev", name: "Dev" },
+  { id: "test", name: "Test" },
+  { id: "qa", name: "QA" },
+  { id: "prod", name: "Prod" },
+]
 
-export default function TemplatesPage() {
-  const [templates, setTemplates] = useState(initialTemplates)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedTemplate, setSelectedTemplate] = useState(null)
-  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
-  const [isSegmentDialogOpen, setIsSegmentDialogOpen] = useState(false)
-  const [isRuleDialogOpen, setIsRuleDialogOpen] = useState(false)
-  const [editMode, setEditMode] = useState(false)
-  const [newTemplate, setNewTemplate] = useState({
-    name: "",
-    description: "",
-    isDefault: false,
+const environments = [
+  { id: "rnd", name: "RND" },
+  { id: "uat", name: "UAT" },
+  { id: "qa", name: "QA" },
+  { id: "prod", name: "Prod" },
+]
+
+// Update the initialNewJob object to include the new environment fields
+const initialNewJob = {
+  name: "",
+  templateId: "template-1",
+  description: "",
+  dataCenters: [],
+  mnemonics: [],
+  serverGroups: [],
+  reportType: "consistency",
+  platoEnvironment: "",
+  environment: "",
+}
+const initialIsDialogOpen = false
+
+// Get status badge based on job status
+const getStatusBadge = (status) => {
+  switch (status) {
+    case "successful":
+      return (
+        <Badge className="bg-green-500 hover:bg-green-600">
+          <Check className="w-3 h-3 mr-1" /> Successful
+        </Badge>
+      )
+    case "failed":
+      return (
+        <Badge className="bg-red-500 hover:bg-red-600">
+          <X className="w-3 h-3 mr-1" /> Failed
+        </Badge>
+      )
+    case "running":
+      return (
+        <Badge className="bg-blue-500 hover:bg-blue-600">
+          <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Running
+        </Badge>
+      )
+    case "pending":
+      return (
+        <Badge className="bg-yellow-500 hover:bg-yellow-600">
+          <Clock className="w-3 h-3 mr-1" /> Pending
+        </Badge>
+      )
+    case "canceled":
+      return (
+        <Badge variant="outline">
+          <AlertCircle className="w-3 h-3 mr-1" /> Canceled
+        </Badge>
+      )
+    default:
+      return <Badge variant="outline">{status}</Badge>
+  }
+}
+
+// Get report type badge
+const getReportTypeBadge = (reportType) => {
+  switch (reportType) {
+    case "consistency":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400"
+        >
+          <Database className="w-3 h-3 mr-1" /> Consistency
+        </Badge>
+      )
+    case "drift":
+      return (
+        <Badge
+          variant="outline"
+          className="bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400"
+        >
+          <Server className="w-3 h-3 mr-1" /> Drift
+        </Badge>
+      )
+    default:
+      return <Badge variant="outline">{reportType}</Badge>
+  }
+}
+
+export default function Dashboard() {
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm)
+  const [statusFilter, setStatusFilter] = useState(initialStatusFilter)
+  const [reportTypeFilter, setReportTypeFilter] = useState("all")
+  const [jobs, setJobs] = useState(initialJobs)
+  const [newJob, setNewJob] = useState({
+    ...initialNewJob,
+    dataCenters: initialNewJob.reportType === "drift" ? ["dc-gf1"] : ["dc-gf1", "dc-gf2"],
   })
-  const [newSegment, setNewSegment] = useState({
-    templateId: "",
-    name: "",
-    description: "",
+  const [isDialogOpen, setIsDialogOpen] = useState(initialIsDialogOpen)
+  const router = useRouter()
+
+  // Filter jobs based on search term, status filter, and report type filter
+  const filteredJobs = jobs.filter((job) => {
+    const matchesSearch =
+      job.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.template.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.inventory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.dataCenters.some((dc) => dc.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    const matchesStatus = statusFilter === "all" || job.status === statusFilter
+    const matchesReportType = reportTypeFilter === "all" || job.reportType === reportTypeFilter
+
+    return matchesSearch && matchesStatus && matchesReportType
   })
-  const [newRule, setNewRule] = useState({
-    templateId: "",
-    segmentId: "",
-    direction: "inbound",
-    port: "",
-    protocol: "TCP",
-    source: "",
-    destination: "",
-    action: "ALLOW",
-    description: "",
-  })
 
-  // Filter templates based on search term
-  const filteredTemplates = templates.filter(
-    (template) =>
-      template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.description.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  // Handle create new template
-  const handleCreateTemplate = () => {
-    if (!newTemplate.name) return
-
-    const template = {
-      id: `template-${Date.now()}`,
-      name: newTemplate.name,
-      description: newTemplate.description,
-      lastUpdated: new Date().toISOString(),
-      updatedBy: "admin",
-      isDefault: newTemplate.isDefault,
-      segments: [],
-    }
-
-    // If this is set as default, remove default from other templates
-    let updatedTemplates = [...templates]
-    if (newTemplate.isDefault) {
-      updatedTemplates = updatedTemplates.map((t) => ({
-        ...t,
-        isDefault: false,
-      }))
-    }
-
-    setTemplates([template, ...updatedTemplates])
-    setNewTemplate({
-      name: "",
-      description: "",
-      isDefault: false,
-    })
-    setIsTemplateDialogOpen(false)
+  // Handle logout
+  const handleLogout = () => {
+    router.push("/")
   }
 
-  // Handle edit template
-  const handleEditTemplate = () => {
-    if (!selectedTemplate || !newTemplate.name) return
-
-    const updatedTemplates = templates.map((template) => {
-      if (template.id === selectedTemplate.id) {
-        return {
-          ...template,
-          name: newTemplate.name,
-          description: newTemplate.description,
-          lastUpdated: new Date().toISOString(),
-          updatedBy: "admin",
-          isDefault: newTemplate.isDefault,
-        }
+  // Handle data center selection
+  const handleDataCenterChange = (id) => {
+    setNewJob((prev) => {
+      // For consistency reports, both data centers should always be selected
+      if (prev.reportType === "consistency") {
+        return prev
       }
 
-      // If the edited template is now default, remove default from others
-      if (newTemplate.isDefault && template.id !== selectedTemplate.id) {
+      // For drift reports, only allow one data center selection
+      const isSelected = prev.dataCenters.includes(id)
+
+      if (isSelected) {
+        // Don't allow deselecting the last data center
+        if (prev.dataCenters.length <= 1) {
+          return prev
+        }
         return {
-          ...template,
-          isDefault: false,
+          ...prev,
+          dataCenters: prev.dataCenters.filter((dcId) => dcId !== id),
+        }
+      } else {
+        // For drift reports, replace the selection instead of adding
+        return {
+          ...prev,
+          dataCenters: [id],
         }
       }
-
-      return template
     })
-
-    setTemplates(updatedTemplates)
-    setSelectedTemplate(null)
-    setNewTemplate({
-      name: "",
-      description: "",
-      isDefault: false,
-    })
-    setIsTemplateDialogOpen(false)
   }
 
-  // Handle duplicate template
-  const handleDuplicateTemplate = (template) => {
-    const duplicatedTemplate = {
-      ...template,
-      id: `template-${Date.now()}`,
-      name: `${template.name} (Copy)`,
-      lastUpdated: new Date().toISOString(),
-      updatedBy: "admin",
-      isDefault: false,
+  // Generate job name based on report type and selected data centers
+  const generateJobName = () => {
+    // Get selected data centers
+    const selectedDCs = availableDataCenters.filter((dc) => newJob.dataCenters.includes(dc.id))
+    const dcNames = selectedDCs.map((dc) => dc.name)
+
+    // Get selected mnemonics
+    const selectedMnemonics = appMnemonics.filter((m) => newJob.mnemonics.includes(m.id)).map((m) => m.name)
+
+    // Get selected template
+    const templateObj = availableTemplates.find((t) => t.id === newJob.templateId) || {
+      name: "Default Firewall Template",
     }
 
-    setTemplates([duplicatedTemplate, ...templates])
-  }
-
-  // Handle delete template
-  const handleDeleteTemplate = (templateId) => {
-    setTemplates(templates.filter((template) => template.id !== templateId))
-  }
-
-  // Handle create segment
-  const handleCreateSegment = () => {
-    if (!newSegment.templateId || !newSegment.name) return
-
-    const segment = {
-      id: `segment-${Date.now()}`,
-      name: newSegment.name,
-      description: newSegment.description,
-      rules: [],
+    if (selectedMnemonics.length === 0) {
+      return ""
     }
 
-    const updatedTemplates = templates.map((template) => {
-      if (template.id === newSegment.templateId) {
-        return {
-          ...template,
-          segments: [...template.segments, segment],
-          lastUpdated: new Date().toISOString(),
-          updatedBy: "admin",
-        }
+    const mnemonicsStr = selectedMnemonics.join(", ")
+
+    if (newJob.reportType === "drift") {
+      // For drift reports: "<Mnemonic(s)> - <Rule Template> - <Data Center>"
+      if (dcNames.length === 1) {
+        return `${mnemonicsStr} - ${templateObj.name} - ${dcNames[0]}`
       }
-      return template
-    })
-
-    setTemplates(updatedTemplates)
-    setNewSegment({
-      templateId: "",
-      name: "",
-      description: "",
-    })
-    setIsSegmentDialogOpen(false)
+      return ""
+    } else {
+      // For consistency reports: "Mnemonic(s) - Rule Template"
+      return `${mnemonicsStr} - ${templateObj.name}`
+    }
   }
 
-  // Handle create rule
-  const handleCreateRule = () => {
-    if (!newRule.templateId || !newRule.segmentId) return
-
-    const rule = {
-      id: `rule-${Date.now()}`,
-      direction: newRule.direction,
-      port: newRule.port,
-      protocol: newRule.protocol,
-      source: newRule.direction === "inbound" ? newRule.source : "",
-      destination: newRule.direction === "outbound" ? newRule.destination : "",
-      action: newRule.action,
-      description: newRule.description,
+  // Update the handleCreateJob function to include the new fields in validation
+  const handleCreateJob = () => {
+    // Validate form
+    if (
+      !newJob.name ||
+      newJob.dataCenters.length === 0 ||
+      newJob.mnemonics.length === 0 ||
+      !newJob.platoEnvironment ||
+      !newJob.environment
+    ) {
+      return
     }
 
-    const updatedTemplates = templates.map((template) => {
-      if (template.id === newRule.templateId) {
-        return {
-          ...template,
-          segments: template.segments.map((segment) => {
-            if (segment.id === newRule.segmentId) {
-              return {
-                ...segment,
-                rules: [...segment.rules, rule],
-              }
+    // For drift reports, only one data center should be selected
+    if (newJob.reportType === "drift" && newJob.dataCenters.length > 1) {
+      alert("Drift reports can only be run on a single data center.")
+      return
+    }
+
+    // For consistency reports, at least two data centers should be selected
+    if (newJob.reportType === "consistency" && newJob.dataCenters.length < 2) {
+      alert("Consistency reports require at least two data centers.")
+      return
+    }
+
+    // Create inventory name based on selected data centers
+    const selectedDCs = availableDataCenters.filter((dc) => newJob.dataCenters.includes(dc.id))
+    const dcNames = selectedDCs.map((dc) => dc.name)
+    let inventoryName = ""
+
+    if (dcNames.length === 1) {
+      inventoryName = `${dcNames[0]} Data Center`
+    } else if (dcNames.length === availableDataCenters.length) {
+      inventoryName = "All Data Centers"
+    } else if (dcNames.length > 1) {
+      inventoryName = "Multiple Data Centers"
+    }
+
+    // Find the template name
+    const templateObj = availableTemplates.find((t) => t.id === newJob.templateId) || {
+      name: "Default Firewall Template",
+    }
+
+    // Get selected mnemonics
+    const selectedMnemonics = appMnemonics.filter((m) => newJob.mnemonics.includes(m.id)).map((m) => m.name)
+
+    // Create new job with current timestamp
+    const now = new Date().toISOString()
+    const newJobEntry = {
+      id: jobs.length + 1,
+      name: newJob.name,
+      template: templateObj.name,
+      status: "running",
+      started: now,
+      finished: null,
+      duration: "Running",
+      user: "admin", // Using a default user
+      inventory: inventoryName,
+      dataCenters: dcNames,
+      mnemonics: selectedMnemonics,
+      serverGroups: newJob.serverGroups,
+      reportType: newJob.reportType,
+      platoEnvironment: newJob.platoEnvironment,
+      environment: newJob.environment,
+      driftSummary:
+        newJob.reportType === "consistency"
+          ? {
+              totalGroups: dcNames.length,
+              driftingGroups: 0, // Will be updated when job completes
+              complianceScore: 0, // Will be updated when job completes
             }
-            return segment
-          }),
-          lastUpdated: new Date().toISOString(),
-          updatedBy: "admin",
+          : {
+              totalServers: 0, // Will be updated when job completes
+              driftingServers: 0, // Will be updated when job completes
+              complianceScore: 0, // Will be updated when job completes
+            },
+    }
+
+    // Add to jobs list
+    setJobs([newJobEntry, ...jobs])
+
+    // Reset form
+    setNewJob({
+      name: "",
+      templateId: "template-1",
+      description: "",
+      dataCenters: [],
+      mnemonics: [],
+      serverGroups: [],
+      reportType: "consistency",
+      platoEnvironment: "",
+      environment: "",
+    })
+
+    // Close dialog
+    setIsDialogOpen(false)
+  }
+
+  // Add a new function to handle mnemonic selection
+  const handleMnemonicChange = (id) => {
+    setNewJob((prev) => {
+      const isSelected = prev.mnemonics.includes(id)
+
+      if (isSelected) {
+        // Remove the mnemonic and any server groups that belong to it
+        const mnemonic = appMnemonics.find((m) => m.id === id)
+        const mnemonicServerGroupIds = mnemonic ? mnemonic.serverGroups.map((sg) => sg.id) : []
+
+        return {
+          ...prev,
+          mnemonics: prev.mnemonics.filter((m) => m !== id),
+          serverGroups: prev.serverGroups.filter((sg) => !mnemonicServerGroupIds.includes(sg)),
+        }
+      } else {
+        // Add the mnemonic
+        return {
+          ...prev,
+          mnemonics: [...prev.mnemonics, id],
         }
       }
-      return template
     })
-
-    setTemplates(updatedTemplates)
-    setNewRule({
-      templateId: "",
-      segmentId: "",
-      direction: "inbound",
-      port: "",
-      protocol: "TCP",
-      source: "",
-      destination: "",
-      action: "ALLOW",
-      description: "",
-    })
-    setIsRuleDialogOpen(false)
   }
 
-  // Open edit template dialog
-  const openEditTemplateDialog = (template) => {
-    setSelectedTemplate(template)
-    setNewTemplate({
-      name: template.name,
-      description: template.description,
-      isDefault: template.isDefault,
-    })
-    setEditMode(true)
-    setIsTemplateDialogOpen(true)
-  }
+  // Add a new function to handle server group selection
+  const handleServerGroupChange = (id) => {
+    setNewJob((prev) => {
+      const isSelected = prev.serverGroups.includes(id)
 
-  // Open new template dialog
-  const openNewTemplateDialog = () => {
-    setSelectedTemplate(null)
-    setNewTemplate({
-      name: "",
-      description: "",
-      isDefault: false,
+      if (isSelected) {
+        return {
+          ...prev,
+          serverGroups: prev.serverGroups.filter((sg) => sg !== id),
+        }
+      } else {
+        return {
+          ...prev,
+          serverGroups: [...prev.serverGroups, id],
+        }
+      }
     })
-    setEditMode(false)
-    setIsTemplateDialogOpen(true)
-  }
-
-  // Open new segment dialog for specific template
-  const openNewSegmentDialog = (templateId) => {
-    setNewSegment({
-      templateId,
-      name: "",
-      description: "",
-    })
-    setIsSegmentDialogOpen(true)
-  }
-
-  // Open new rule dialog for specific template and segment
-  const openNewRuleDialog = (templateId, segmentId) => {
-    setNewRule({
-      templateId,
-      segmentId,
-      direction: "inbound",
-      port: "",
-      protocol: "TCP",
-      source: "",
-      destination: "",
-      action: "ALLOW",
-      description: "",
-    })
-    setIsRuleDialogOpen(true)
   }
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
         <h1 className="text-lg font-semibold">Firewall Drift Dashboard</h1>
-        <Tabs defaultValue="templates" className="flex-1">
-          <TabsList className="ml-auto">
-            <TabsTrigger value="jobs" asChild>
-              <Link href="/">Jobs</Link>
-            </TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-            <TabsTrigger value="inventories" asChild>
-              <Link href="/inventories">Inventories</Link>
-            </TabsTrigger>
-            <TabsTrigger value="projects" asChild>
-              <Link href="/projects">Projects</Link>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="ml-auto">
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
+        </div>
       </header>
-
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Firewall Templates</h2>
-            <p className="text-muted-foreground">Create and manage baseline firewall rule templates</p>
+            <h2 className="text-2xl font-bold tracking-tight">Drift Reporting</h2>
+            <p className="text-muted-foreground">Compare firewall rules across data centers</p>
           </div>
-          <Button onClick={openNewTemplateDialog}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Template
-          </Button>
-        </div>
-
-        {/* Template Management UI */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2">
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search templates..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Select defaultValue="updated">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="updated">Last Updated</SelectItem>
-                  <SelectItem value="name">Name (A-Z)</SelectItem>
-                  <SelectItem value="segments">Number of Segments</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon">
-                <Download className="h-4 w-4" />
-                <span className="sr-only">Export</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Templates List */}
-          {filteredTemplates.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-10">
-                <div className="text-center">
-                  <Shield className="mx-auto h-10 w-10 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium">No Templates Found</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">Create a new template to get started.</p>
-                  <Button onClick={openNewTemplateDialog} className="mt-4">
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Template
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {filteredTemplates.map((template) => (
-                <Collapsible key={template.id} className="border rounded-lg">
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <Shield className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{template.name}</span>
-                          {template.isDefault && (
-                            <Badge variant="outline" className="text-xs">
-                              Default
-                            </Badge>
-                          )}
+          <div className="flex items-center gap-2">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setNewJob({
+                      ...initialNewJob,
+                      reportType: "drift",
+                      dataCenters: ["dc-gf1"],
+                      mnemonics: [],
+                      serverGroups: [],
+                      platoEnvironment: "",
+                      environment: "",
+                    })
+                  }
+                >
+                  <Server className="mr-2 h-4 w-4" />
+                  Generate Drift Report
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  {newJob.reportType === "drift" ? "Generate Drift Report" : "Generate Consistency Report"}
+                </DialogHeader>
+                <DialogDescription>
+                  {newJob.reportType === "drift"
+                    ? "Analyze server drift within a single data center."
+                    : "Compare firewall rules across multiple data centers."}
+                </DialogDescription>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label className="text-right pt-2">
+                      {newJob.reportType === "drift" ? "Data Center" : "Data Centers"}
+                    </Label>
+                    <div className="col-span-3 space-y-3">
+                      {availableDataCenters.map((dc) => (
+                        <div key={dc.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`dc-${dc.id}`}
+                            checked={newJob.dataCenters.includes(dc.id)}
+                            onCheckedChange={() => handleDataCenterChange(dc.id)}
+                            disabled={
+                              (newJob.reportType === "drift" &&
+                                newJob.dataCenters.length > 0 &&
+                                !newJob.dataCenters.includes(dc.id)) ||
+                              newJob.reportType === "consistency"
+                            }
+                          />
+                          <Label htmlFor={`dc-${dc.id}`} className="flex items-center gap-2">
+                            <Database className="h-4 w-4 text-muted-foreground" />
+                            <span>{dc.name}</span>
+                            <span className="text-xs text-muted-foreground">({dc.location})</span>
+                          </Label>
                         </div>
-                        <div className="text-sm text-muted-foreground">{template.description}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-sm text-muted-foreground">
-                        {template.segments.length} segments,{" "}
-                        {template.segments.reduce((acc, segment) => acc + segment.rules.length, 0)} rules
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openEditTemplateDialog(template)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">More</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleDuplicateTemplate(template)}>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openNewSegmentDialog(template.id)}>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add Segment
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => handleDeleteTemplate(template.id)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <ChevronDown className="h-4 w-4" />
-                      </div>
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="p-4 pt-1 border-t">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-sm font-medium">Segments</h3>
-                        <Button variant="outline" size="sm" onClick={() => openNewSegmentDialog(template.id)}>
-                          <Plus className="mr-2 h-3 w-3" />
-                          Add Segment
-                        </Button>
-                      </div>
-
-                      {template.segments.length === 0 ? (
-                        <div className="text-center p-8 border rounded-md bg-muted/30">
-                          <p className="text-muted-foreground">No segments defined yet.</p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-2"
-                            onClick={() => openNewSegmentDialog(template.id)}
-                          >
-                            Add First Segment
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {template.segments.map((segment) => (
-                            <Collapsible key={segment.id} className="border rounded-md">
-                              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/30">
-                                <div className="font-medium text-sm">{segment.name}</div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground">{segment.rules.length} rules</span>
-                                  <ChevronDown className="h-4 w-4" />
-                                </div>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                <div className="p-3 pt-0 border-t">
-                                  <div className="flex justify-between items-center mb-3">
-                                    <div className="text-xs text-muted-foreground">{segment.description}</div>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => openNewRuleDialog(template.id, segment.id)}
-                                    >
-                                      <Plus className="mr-1 h-3 w-3" />
-                                      Add Rule
-                                    </Button>
-                                  </div>
-
-                                  {segment.rules.length === 0 ? (
-                                    <div className="text-center py-4 text-sm text-muted-foreground">
-                                      No rules defined yet.
-                                    </div>
-                                  ) : (
-                                    <div className="border rounded-md overflow-hidden">
-                                      <Table>
-                                        <TableHeader>
-                                          <TableRow>
-                                            <TableHead className="w-[100px]">Direction</TableHead>
-                                            <TableHead className="w-[100px]">Port</TableHead>
-                                            <TableHead className="w-[100px]">Protocol</TableHead>
-                                            <TableHead>Source/Destination</TableHead>
-                                            <TableHead className="w-[100px]">Action</TableHead>
-                                            <TableHead>Description</TableHead>
-                                            <TableHead className="w-[50px]"></TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                          {segment.rules.map((rule) => (
-                                            <TableRow key={rule.id}>
-                                              <TableCell className="capitalize">{rule.direction}</TableCell>
-                                              <TableCell>{rule.port}</TableCell>
-                                              <TableCell>{rule.protocol}</TableCell>
-                                              <TableCell>
-                                                {rule.direction === "inbound" ? rule.source : rule.destination}
-                                              </TableCell>
-                                              <TableCell>
-                                                <Badge variant={rule.action === "ALLOW" ? "default" : "destructive"}>
-                                                  {rule.action}
-                                                </Badge>
-                                              </TableCell>
-                                              <TableCell>{rule.description}</TableCell>
-                                              <TableCell>
-                                                <DropdownMenu>
-                                                  <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                                                      <MoreHorizontal className="h-3 w-3" />
-                                                    </Button>
-                                                  </DropdownMenuTrigger>
-                                                  <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
-                                                      <Edit className="mr-2 h-4 w-4" />
-                                                      Edit Rule
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                      <ArrowUp className="mr-2 h-4 w-4" />
-                                                      Move Up
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                      <ArrowDown className="mr-2 h-4 w-4" />
-                                                      Move Down
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                                      <Trash2 className="mr-2 h-4 w-4" />
-                                                      Delete
-                                                    </DropdownMenuItem>
-                                                  </DropdownMenuContent>
-                                                </DropdownMenu>
-                                              </TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </div>
-                                  )}
-                                </div>
-                              </CollapsibleContent>
-                            </Collapsible>
-                          ))}
-                        </div>
+                      ))}
+                      {newJob.dataCenters.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          {newJob.reportType === "drift"
+                            ? "Select a data center to check for server drift"
+                            : "Select at least two data centers to compare"}
+                        </p>
                       )}
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              ))}
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label className="text-right pt-2">App Mnemonics</Label>
+                    <div className="col-span-3 space-y-3">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between h-auto min-h-10 p-2"
+                          >
+                            <div className="flex flex-wrap gap-1">
+                              {newJob.mnemonics.length === 0 ? (
+                                <span className="text-muted-foreground">Select app mnemonics...</span>
+                              ) : (
+                                newJob.mnemonics.map((mnemonicId) => {
+                                  const mnemonic = appMnemonics.find((m) => m.id === mnemonicId)
+                                  return mnemonic ? (
+                                    <Badge key={mnemonicId} variant="secondary" className="text-xs">
+                                      {mnemonic.name}
+                                      <button
+                                        type="button"
+                                        className="ml-1 hover:bg-muted rounded-full"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleMnemonicChange(mnemonicId)
+                                        }}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </Badge>
+                                  ) : null
+                                })
+                              )}
+                            </div>
+                            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search mnemonics..." />
+                            <CommandList>
+                              <CommandEmpty>No mnemonics found.</CommandEmpty>
+                              <CommandGroup>
+                                {appMnemonics.map((mnemonic) => (
+                                  <CommandItem
+                                    key={mnemonic.id}
+                                    value={mnemonic.name}
+                                    onSelect={() => handleMnemonicChange(mnemonic.id)}
+                                  >
+                                    <div className="flex items-center gap-2 w-full">
+                                      <Checkbox checked={newJob.mnemonics.includes(mnemonic.id)} readOnly />
+                                      <Server className="h-4 w-4 text-muted-foreground" />
+                                      <div className="flex-1">
+                                        <span>{mnemonic.name}</span>
+                                        <span className="text-xs text-muted-foreground ml-2">
+                                          ({mnemonic.description})
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      {newJob.mnemonics.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Select at least one app mnemonic to analyze</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {newJob.mnemonics.length > 0 && (
+                    <div className="grid grid-cols-4 items-start gap-4">
+                      <Label className="text-right pt-2">Server Groups</Label>
+                      <div className="col-span-3 space-y-3">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="w-full justify-between h-auto min-h-10 p-2"
+                            >
+                              <div className="flex flex-wrap gap-1">
+                                {newJob.serverGroups.length === 0 ? (
+                                  <span className="text-muted-foreground">Select server groups...</span>
+                                ) : (
+                                  newJob.serverGroups.map((groupId) => {
+                                    // Find the group across all selected mnemonics
+                                    let foundGroup = null
+                                    let foundMnemonic = null
+                                    for (const mnemonicId of newJob.mnemonics) {
+                                      const mnemonic = appMnemonics.find((m) => m.id === mnemonicId)
+                                      if (mnemonic) {
+                                        const group = mnemonic.serverGroups.find((g) => g.id === groupId)
+                                        if (group) {
+                                          foundGroup = group
+                                          foundMnemonic = mnemonic
+                                          break
+                                        }
+                                      }
+                                    }
+                                    return foundGroup ? (
+                                      <Badge key={groupId} variant="secondary" className="text-xs">
+                                        {foundMnemonic.name}: {foundGroup.name}
+                                        <button
+                                          type="button"
+                                          className="ml-1 hover:bg-muted rounded-full"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleServerGroupChange(groupId)
+                                          }}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </button>
+                                      </Badge>
+                                    ) : null
+                                  })
+                                )}
+                              </div>
+                              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search server groups..." />
+                              <CommandList>
+                                <CommandEmpty>No server groups found.</CommandEmpty>
+                                {newJob.mnemonics.map((mnemonicId) => {
+                                  const mnemonic = appMnemonics.find((m) => m.id === mnemonicId)
+                                  if (!mnemonic) return null
+
+                                  return (
+                                    <CommandGroup key={mnemonic.id} heading={mnemonic.name}>
+                                      {mnemonic.serverGroups.map((group) => (
+                                        <CommandItem
+                                          key={group.id}
+                                          value={`${mnemonic.name} ${group.name}`}
+                                          onSelect={() => handleServerGroupChange(group.id)}
+                                        >
+                                          <div className="flex items-center gap-2 w-full">
+                                            <Checkbox checked={newJob.serverGroups.includes(group.id)} readOnly />
+                                            <div className="flex-1">
+                                              <span>{group.name}</span>
+                                              <span className="text-xs text-muted-foreground ml-2">
+                                                ({group.description})
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  )
+                                })}
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        {newJob.serverGroups.length === 0 && (
+                          <p className="text-sm text-muted-foreground">Select at least one server group to analyze</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-template" className="text-right">
+                      Template
+                    </Label>
+                    <Select
+                      value={newJob.templateId}
+                      onValueChange={(value) => setNewJob({ ...newJob, templateId: value })}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-muted-foreground" />
+                              {template.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-plato-environment" className="text-right">
+                      Plato Environment *
+                    </Label>
+                    <Select
+                      value={newJob.platoEnvironment}
+                      onValueChange={(value) => setNewJob({ ...newJob, platoEnvironment: value })}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select Plato environment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {platoEnvironments.map((env) => (
+                          <SelectItem key={env.id} value={env.id}>
+                            {env.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-environment" className="text-right">
+                      Environment *
+                    </Label>
+                    <Select
+                      value={newJob.environment}
+                      onValueChange={(value) => setNewJob({ ...newJob, environment: value })}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select environment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {environments.map((env) => (
+                          <SelectItem key={env.id} value={env.id}>
+                            {env.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-name" className="text-right">
+                      Name
+                    </Label>
+                    <div className="col-span-3 space-y-2">
+                      <Input
+                        id="job-name"
+                        value={newJob.name}
+                        onChange={(e) => setNewJob({ ...newJob, name: e.target.value })}
+                        placeholder="Enter job name"
+                        required
+                      />
+                      {newJob.dataCenters.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setNewJob({ ...newJob, name: generateJobName() })}
+                        >
+                          Generate Name
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-description" className="text-right">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="job-description"
+                      value={newJob.description}
+                      onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
+                      className="col-span-3"
+                      placeholder="Optional job description"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreateJob}
+                    disabled={
+                      !newJob.name ||
+                      newJob.dataCenters.length === 0 ||
+                      newJob.mnemonics.length === 0 ||
+                      newJob.serverGroups.length === 0 ||
+                      !newJob.platoEnvironment ||
+                      !newJob.environment ||
+                      (newJob.reportType === "consistency" && newJob.dataCenters.length < 2)
+                    }
+                  >
+                    {newJob.reportType === "drift" ? "Launch Drift Report" : "Launch Consistency Report"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  onClick={() =>
+                    setNewJob({
+                      ...initialNewJob,
+                      reportType: "consistency",
+                      dataCenters: ["dc-gf1", "dc-gf2"],
+                      mnemonics: [],
+                      serverGroups: [],
+                      platoEnvironment: "",
+                      environment: "",
+                    })
+                  }
+                >
+                  <Database className="mr-2 h-4 w-4" />
+                  Generate Consistency Report
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  {newJob.reportType === "drift" ? "Generate Drift Report" : "Generate Consistency Report"}
+                </DialogHeader>
+                <DialogDescription>
+                  {newJob.reportType === "drift"
+                    ? "Analyze server drift within a single data center."
+                    : "Compare firewall rules across multiple data centers."}
+                </DialogDescription>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label className="text-right pt-2">
+                      {newJob.reportType === "drift" ? "Data Center" : "Data Centers"}
+                    </Label>
+                    <div className="col-span-3 space-y-3">
+                      {availableDataCenters.map((dc) => (
+                        <div key={dc.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`dc-${dc.id}`}
+                            checked={newJob.dataCenters.includes(dc.id)}
+                            onCheckedChange={() => handleDataCenterChange(dc.id)}
+                            disabled={
+                              (newJob.reportType === "drift" &&
+                                newJob.dataCenters.length > 0 &&
+                                !newJob.dataCenters.includes(dc.id)) ||
+                              newJob.reportType === "consistency"
+                            }
+                          />
+                          <Label htmlFor={`dc-${dc.id}`} className="flex items-center gap-2">
+                            <Database className="h-4 w-4 text-muted-foreground" />
+                            <span>{dc.name}</span>
+                            <span className="text-xs text-muted-foreground">({dc.location})</span>
+                          </Label>
+                        </div>
+                      ))}
+                      {newJob.dataCenters.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          {newJob.reportType === "drift"
+                            ? "Select a data center to check for server drift"
+                            : "Select at least two data centers to compare"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label className="text-right pt-2">App Mnemonics</Label>
+                    <div className="col-span-3 space-y-3">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between h-auto min-h-10 p-2"
+                          >
+                            <div className="flex flex-wrap gap-1">
+                              {newJob.mnemonics.length === 0 ? (
+                                <span className="text-muted-foreground">Select app mnemonics...</span>
+                              ) : (
+                                newJob.mnemonics.map((mnemonicId) => {
+                                  const mnemonic = appMnemonics.find((m) => m.id === mnemonicId)
+                                  return mnemonic ? (
+                                    <Badge key={mnemonicId} variant="secondary" className="text-xs">
+                                      {mnemonic.name}
+                                      <button
+                                        type="button"
+                                        className="ml-1 hover:bg-muted rounded-full"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleMnemonicChange(mnemonicId)
+                                        }}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    </Badge>
+                                  ) : null
+                                })
+                              )}
+                            </div>
+                            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search mnemonics..." />
+                            <CommandList>
+                              <CommandEmpty>No mnemonics found.</CommandEmpty>
+                              <CommandGroup>
+                                {appMnemonics.map((mnemonic) => (
+                                  <CommandItem
+                                    key={mnemonic.id}
+                                    value={mnemonic.name}
+                                    onSelect={() => handleMnemonicChange(mnemonic.id)}
+                                  >
+                                    <div className="flex items-center gap-2 w-full">
+                                      <Checkbox checked={newJob.mnemonics.includes(mnemonic.id)} readOnly />
+                                      <Server className="h-4 w-4 text-muted-foreground" />
+                                      <div className="flex-1">
+                                        <span>{mnemonic.name}</span>
+                                        <span className="text-xs text-muted-foreground ml-2">
+                                          ({mnemonic.description})
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      {newJob.mnemonics.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Select at least one app mnemonic to analyze</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {newJob.mnemonics.length > 0 && (
+                    <div className="grid grid-cols-4 items-start gap-4">
+                      <Label className="text-right pt-2">Server Groups</Label>
+                      <div className="col-span-3 space-y-3">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="w-full justify-between h-auto min-h-10 p-2"
+                            >
+                              <div className="flex flex-wrap gap-1">
+                                {newJob.serverGroups.length === 0 ? (
+                                  <span className="text-muted-foreground">Select server groups...</span>
+                                ) : (
+                                  newJob.serverGroups.map((groupId) => {
+                                    // Find the group across all selected mnemonics
+                                    let foundGroup = null
+                                    let foundMnemonic = null
+                                    for (const mnemonicId of newJob.mnemonics) {
+                                      const mnemonic = appMnemonics.find((m) => m.id === mnemonicId)
+                                      if (mnemonic) {
+                                        const group = mnemonic.serverGroups.find((g) => g.id === groupId)
+                                        if (group) {
+                                          foundGroup = group
+                                          foundMnemonic = mnemonic
+                                          break
+                                        }
+                                      }
+                                    }
+                                    return foundGroup ? (
+                                      <Badge key={groupId} variant="secondary" className="text-xs">
+                                        {foundMnemonic.name}: {foundGroup.name}
+                                        <button
+                                          type="button"
+                                          className="ml-1 hover:bg-muted rounded-full"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleServerGroupChange(groupId)
+                                          }}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </button>
+                                      </Badge>
+                                    ) : null
+                                  })
+                                )}
+                              </div>
+                              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search server groups..." />
+                              <CommandList>
+                                <CommandEmpty>No server groups found.</CommandEmpty>
+                                {newJob.mnemonics.map((mnemonicId) => {
+                                  const mnemonic = appMnemonics.find((m) => m.id === mnemonicId)
+                                  if (!mnemonic) return null
+
+                                  return (
+                                    <CommandGroup key={mnemonic.id} heading={mnemonic.name}>
+                                      {mnemonic.serverGroups.map((group) => (
+                                        <CommandItem
+                                          key={group.id}
+                                          value={`${mnemonic.name} ${group.name}`}
+                                          onSelect={() => handleServerGroupChange(group.id)}
+                                        >
+                                          <div className="flex items-center gap-2 w-full">
+                                            <Checkbox checked={newJob.serverGroups.includes(group.id)} readOnly />
+                                            <div className="flex-1">
+                                              <span>{group.name}</span>
+                                              <span className="text-xs text-muted-foreground ml-2">
+                                                ({group.description})
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  )
+                                })}
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        {newJob.serverGroups.length === 0 && (
+                          <p className="text-sm text-muted-foreground">Select at least one server group to analyze</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-template" className="text-right">
+                      Template
+                    </Label>
+                    <Select
+                      value={newJob.templateId}
+                      onValueChange={(value) => setNewJob({ ...newJob, templateId: value })}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-muted-foreground" />
+                              {template.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-plato-environment" className="text-right">
+                      Plato Environment *
+                    </Label>
+                    <Select
+                      value={newJob.platoEnvironment}
+                      onValueChange={(value) => setNewJob({ ...newJob, platoEnvironment: value })}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select Plato environment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {platoEnvironments.map((env) => (
+                          <SelectItem key={env.id} value={env.id}>
+                            {env.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-environment" className="text-right">
+                      Environment *
+                    </Label>
+                    <Select
+                      value={newJob.environment}
+                      onValueChange={(value) => setNewJob({ ...newJob, environment: value })}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select environment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {environments.map((env) => (
+                          <SelectItem key={env.id} value={env.id}>
+                            {env.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-name" className="text-right">
+                      Name
+                    </Label>
+                    <div className="col-span-3 space-y-2">
+                      <Input
+                        id="job-name"
+                        value={newJob.name}
+                        onChange={(e) => setNewJob({ ...newJob, name: e.target.value })}
+                        placeholder="Enter job name"
+                        required
+                      />
+                      {newJob.dataCenters.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setNewJob({ ...newJob, name: generateJobName() })}
+                        >
+                          Generate Name
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-description" className="text-right">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="job-description"
+                      value={newJob.description}
+                      onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
+                      className="col-span-3"
+                      placeholder="Optional job description"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreateJob}
+                    disabled={
+                      !newJob.name ||
+                      newJob.dataCenters.length === 0 ||
+                      newJob.mnemonics.length === 0 ||
+                      newJob.serverGroups.length === 0 ||
+                      !newJob.platoEnvironment ||
+                      !newJob.environment ||
+                      (newJob.reportType === "consistency" && newJob.dataCenters.length < 2)
+                    }
+                  >
+                    {newJob.reportType === "drift" ? "Launch Drift Report" : "Launch Consistency Report"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Report History</CardTitle>
+            <CardDescription>Recent firewall rule analysis jobs</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
+              <div className="flex flex-1 items-center gap-2">
+                <div className="relative flex-1 md:max-w-sm">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search jobs..."
+                    className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="h-10">
+                      <Filter className="mr-2 h-4 w-4" />
+                      Filter
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem className="font-semibold">Status</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter("all")}>All Statuses</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter("successful")}>Successful</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter("failed")}>Failed</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter("running")}>Running</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter("pending")}>Pending</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter("canceled")}>Canceled</DropdownMenuItem>
+
+                    <DropdownMenuItem className="font-semibold mt-2">Report Type</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setReportTypeFilter("all")}>All Types</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setReportTypeFilter("consistency")}>
+                      Consistency Reports
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setReportTypeFilter("drift")}>Drift Reports</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Select defaultValue="recent">
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="recent">Most Recent</SelectItem>
+                    <SelectItem value="oldest">Oldest First</SelectItem>
+                    <SelectItem value="name">Name (A-Z)</SelectItem>
+                    <SelectItem value="compliance">Compliance Score</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon">
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="sr-only">Refresh</span>
+                </Button>
+                <Button variant="outline" size="icon">
+                  <Download className="h-4 w-4" />
+                  <span className="sr-only">Download</span>
+                </Button>
+              </div>
             </div>
-          )}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden md:table-cell">Type</TableHead>
+                    <TableHead className="hidden md:table-cell">Template</TableHead>
+                    <TableHead className="hidden md:table-cell">Started</TableHead>
+                    <TableHead className="hidden lg:table-cell">Compliance</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredJobs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No jobs found matching your criteria
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredJobs.map((job) => (
+                      <TableRow key={job.id}>
+                        <TableCell className="font-medium">
+                          <Link href={`/job/${job.id}`} className="hover:underline">
+                            {job.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(job.status)}</TableCell>
+                        <TableCell className="hidden md:table-cell">{getReportTypeBadge(job.reportType)}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <div className="flex items-center gap-1">
+                            <Shield className="h-4 w-4 text-muted-foreground" />
+                            <span>{job.template}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {job.started ? (
+                            <div className="flex items-center">
+                              <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                              {format(parseISO(job.started), "MMM d, h:mm a")}
+                            </div>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {job.driftSummary ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-12 bg-muted rounded-full h-2">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    job.driftSummary.complianceScore > 90
+                                      ? "bg-green-500"
+                                      : job.driftSummary.complianceScore > 75
+                                        ? "bg-amber-500"
+                                        : "bg-red-500"
+                                  }`}
+                                  style={{ width: `${job.driftSummary.complianceScore}%` }}
+                                />
+                              </div>
+                              <span>{job.driftSummary.complianceScore}%</span>
+                            </div>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/job/${job.id}`}>View Details</Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>View Output</DropdownMenuItem>
+                              <DropdownMenuItem>Relaunch Job</DropdownMenuItem>
+                              <DropdownMenuItem>Download Report</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Showing <strong>{filteredJobs.length}</strong> of <strong>{jobs.length}</strong> jobs
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled>
+                  Previous
+                </Button>
+                <Button variant="outline" size="sm">
+                  Next
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{jobs.length}</div>
+              <p className="text-xs text-muted-foreground">+2 from last week</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Average Compliance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {Math.round(
+                  jobs
+                    .filter((job) => job.driftSummary)
+                    .reduce((sum, job) => sum + job.driftSummary.complianceScore, 0) /
+                    jobs.filter((job) => job.driftSummary).length,
+                )}
+                %
+              </div>
+              <p className="text-xs text-muted-foreground">-2% from last week</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Consistency Reports</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{jobs.filter((job) => job.reportType === "consistency").length}</div>
+              <p className="text-xs text-muted-foreground">Group comparisons</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Drift Reports</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{jobs.filter((job) => job.reportType === "drift").length}</div>
+              <p className="text-xs text-muted-foreground">Server drift analysis</p>
+            </CardContent>
+          </Card>
         </div>
       </main>
-
-      {/* Template Dialog */}
-      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
-        <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader>
-            <DialogTitle>{editMode ? "Edit Template" : "Create Template"}</DialogTitle>
-            <DialogDescription>
-              {editMode ? "Update the template details." : "Create a new template with baseline firewall rules."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="template-name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="template-name"
-                value={newTemplate.name}
-                onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
-                className="col-span-3"
-                placeholder="Enter template name"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="template-description" className="text-right">
-                Description
-              </Label>
-              <Textarea
-                id="template-description"
-                value={newTemplate.description}
-                onChange={(e) => setNewTemplate({ ...newTemplate, description: e.target.value })}
-                className="col-span-3"
-                placeholder="Enter template description"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Default</Label>
-              <div className="flex items-center space-x-2 col-span-3">
-                <Switch
-                  id="template-default"
-                  checked={newTemplate.isDefault}
-                  onCheckedChange={(checked) => setNewTemplate({ ...newTemplate, isDefault: checked })}
-                />
-                <Label htmlFor="template-default">Make this the default template</Label>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={editMode ? handleEditTemplate : handleCreateTemplate}>
-              {editMode ? "Save Changes" : "Create Template"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Segment Dialog */}
-      <Dialog open={isSegmentDialogOpen} onOpenChange={setIsSegmentDialogOpen}>
-        <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader>
-            <DialogTitle>Add Rule Segment</DialogTitle>
-            <DialogDescription>Create a new segment to group related firewall rules.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="segment-name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="segment-name"
-                value={newSegment.name}
-                onChange={(e) => setNewSegment({ ...newSegment, name: e.target.value })}
-                className="col-span-3"
-                placeholder="Enter segment name"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="segment-description" className="text-right">
-                Description
-              </Label>
-              <Textarea
-                id="segment-description"
-                value={newSegment.description}
-                onChange={(e) => setNewSegment({ ...newSegment, description: e.target.value })}
-                className="col-span-3"
-                placeholder="Enter segment description"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSegmentDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateSegment} disabled={!newSegment.name}>
-              Add Segment
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Rule Dialog */}
-      <Dialog open={isRuleDialogOpen} onOpenChange={setIsRuleDialogOpen}>
-        <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader>
-            <DialogTitle>Add Firewall Rule</DialogTitle>
-            <DialogDescription>Add a new firewall rule to the selected segment.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="rule-direction" className="text-right">
-                Direction
-              </Label>
-              <Select value={newRule.direction} onValueChange={(value) => setNewRule({ ...newRule, direction: value })}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select direction" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="inbound">Inbound</SelectItem>
-                  <SelectItem value="outbound">Outbound</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="rule-port" className="text-right">
-                Port
-              </Label>
-              <Input
-                id="rule-port"
-                value={newRule.port}
-                onChange={(e) => setNewRule({ ...newRule, port: e.target.value })}
-                className="col-span-3"
-                placeholder="Enter port number or 'Any'"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="rule-protocol" className="text-right">
-                Protocol
-              </Label>
-              <Select value={newRule.protocol} onValueChange={(value) => setNewRule({ ...newRule, protocol: value })}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select protocol" />
-                </SelectTrigger>
-                <SelectContent>
-                  {protocolOptions.map((protocol) => (
-                    <SelectItem key={protocol} value={protocol}>
-                      {protocol}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {newRule.direction === "inbound" ? (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="rule-source" className="text-right">
-                  Source
-                </Label>
-                <Input
-                  id="rule-source"
-                  value={newRule.source}
-                  onChange={(e) => setNewRule({ ...newRule, source: e.target.value })}
-                  className="col-span-3"
-                  placeholder="Enter source IP/CIDR"
-                  required
-                />
-              </div>
-            ) : (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="rule-destination" className="text-right">
-                  Destination
-                </Label>
-                <Input
-                  id="rule-destination"
-                  value={newRule.destination}
-                  onChange={(e) => setNewRule({ ...newRule, destination: e.target.value })}
-                  className="col-span-3"
-                  placeholder="Enter destination IP/CIDR"
-                  required
-                />
-              </div>
-            )}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="rule-action" className="text-right">
-                Action
-              </Label>
-              <Select value={newRule.action} onValueChange={(value) => setNewRule({ ...newRule, action: value })}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select action" />
-                </SelectTrigger>
-                <SelectContent>
-                  {actionOptions.map((action) => (
-                    <SelectItem key={action} value={action}>
-                      {action}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="rule-description" className="text-right">
-                Description
-              </Label>
-              <Input
-                id="rule-description"
-                value={newRule.description}
-                onChange={(e) => setNewRule({ ...newRule, description: e.target.value })}
-                className="col-span-3"
-                placeholder="Enter rule description"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRuleDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateRule}
-              disabled={
-                !newRule.port ||
-                (newRule.direction === "inbound" && !newRule.source) ||
-                (newRule.direction === "outbound" && !newRule.destination)
-              }
-            >
-              Add Rule
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
