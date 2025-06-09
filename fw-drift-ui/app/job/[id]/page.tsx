@@ -42,7 +42,7 @@ const firewallRules = {
   inbound: [
     { id: 1, port: 22, protocol: "TCP", source: "10.0.0.0/8", action: "ALLOW", description: "SSH Access" },
     { id: 2, port: 80, protocol: "TCP", source: "0.0.0.0/0", action: "ALLOW", description: "HTTP" },
-    { id: 3, port: 443, protocol: 'TCP", source: 0.0.0.0/0', action: "ALLOW", description: "HTTPS" },
+    { id: 3, port: 443, protocol: "TCP", source: "0.0.0.0/0", action: "ALLOW", description: "HTTPS" },
     { id: 4, port: 3389, protocol: "TCP", source: "10.0.0.0/8", action: "ALLOW", description: "RDP Access" },
     { id: 5, port: 1433, protocol: "TCP", source: "10.0.0.0/8", action: "ALLOW", description: "SQL Server" },
   ],
@@ -793,7 +793,7 @@ export default function JobDetailsPage() {
                     </div>
                     <svg className="w-full h-full" viewBox="0 0 100 100">
                       {/* Background circle */}
-                      <circle cx="50" cy="50" r="45" fill="none" stroke="hsl(var(--muted))" strokeWidth="10" strokeWidth="10" />
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
                       {/* Foreground circle */}
                       <circle
                         cx="50"
@@ -1317,179 +1317,179 @@ export default function JobDetailsPage() {
                       )
                     }\
                   </CardContent>
-                </Card>
-              </TabsContent>
+              </Card>
+            </TabsContent>
 
-              {/* Details Tab */}
-              <TabsContent value="details" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Job Information</CardTitle>
-                    <CardDescription>Detailed information about this job execution</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
-                          <div>{getStatusBadge(job.status)}</div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Template</h3>
-                          <p>{job.template}</p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Inventory</h3>
-                          <p>{job.inventory}</p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Report Type</h3>
-                          <div>{getReportTypeBadge(job.reportType)}</div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Project</h3>
-                          <p>{job.project}</p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Environment</h3>
-                          <p>{job.environment}</p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Credentials</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {job.credentials.map((cred) => (
-                              <Badge key={cred} variant="outline">
-                                {cred}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Started</h3>
-                          <div className="flex items-center">
-                            <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                            {job.started ? new Date(job.started).toLocaleString() : "Pending"}
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Finished</h3>
-                          <div className="flex items-center">
-                            <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                            {job.finished ? new Date(job.finished).toLocaleString() : "Running"}
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Duration</h3>
-                          <p>{job.duration}</p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Launched By</h3>
-                          <div className="flex items-center">
-                            <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                            {job.user}
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Job Type</h3>
-                          <p>{job.jobType}</p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Launch Type</h3>
-                          <p>{job.launchType}</p>
-                        </div>
-                      </div>
+          {/* Details Tab */}
+          <TabsContent value="details" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Job Information</CardTitle>
+                <CardDescription>Detailed information about this job execution</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
+                      <div>{getStatusBadge(job.status)}</div>
                     </div>
 
-                    <Separator />
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Template</h3>
+                      <p>{job.template}</p>
+                    </div>
 
                     <div>
-                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Job Tags</h3>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Inventory</h3>
+                      <p>{job.inventory}</p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Report Type</h3>
+                      <div>{getReportTypeBadge(job.reportType)}</div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Project</h3>
+                      <p>{job.project}</p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Environment</h3>
+                      <p>{job.environment}</p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Credentials</h3>
                       <div className="flex flex-wrap gap-2">
-                        {job.jobTags.map((tag) => (
-                          <Badge key={tag} variant="secondary">
-                            {tag}
+                        {job.credentials.map((cred) => (
+                          <Badge key={cred} variant="outline">
+                            {cred}
                           </Badge>
                         ))}
                       </div>
                     </div>
+                  </div>
 
+                  <div className="space-y-4">
                     <div>
-                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Skip Tags</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {job.skipTags.length > 0 ? (
-                          job.skipTags.map((tag) => (
-                            <Badge key={tag} variant="outline">
-                              {tag}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground">None</span>
-                        )}
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Started</h3>
+                      <div className="flex items-center">
+                        <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                        {job.started ? new Date(job.started).toLocaleString() : "Pending"}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
-              {/* Output Tab */}
-              <TabsContent value="output" className="space-y-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0">
                     <div>
-                      <CardTitle>Job Output</CardTitle>
-                      <CardDescription>Console output from the job execution</CardDescription>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Finished</h3>
+                      <div className="flex items-center">
+                        <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                        {job.finished ? new Date(job.finished).toLocaleString() : "Running"}
+                      </div>
                     </div>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="outline" size="icon">
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Copy to clipboard</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="bg-black text-green-400 p-4 rounded-md overflow-auto h-[500px] text-sm font-mono">
-                      {job.output}
-                    </pre>
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
-              {/* Variables Tab */}
-              <TabsContent value="variables" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Extra Variables</CardTitle>
-                    <CardDescription>Variables passed to the job template</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="bg-muted p-4 rounded-md overflow-auto text-sm font-mono">
-                      {JSON.stringify(job.extraVars, null, 2)}
-                    </pre>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </main>
-        </div>
-      )
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Duration</h3>
+                      <p>{job.duration}</p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Launched By</h3>
+                      <div className="flex items-center">
+                        <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                        {job.user}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Job Type</h3>
+                      <p>{job.jobType}</p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Launch Type</h3>
+                      <p>{job.launchType}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Job Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {job.jobTags.map((tag) => (
+                      <Badge key={tag} variant="secondary">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Skip Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {job.skipTags.length > 0 ? (
+                      job.skipTags.map((tag) => (
+                        <Badge key={tag} variant="outline">
+                          {tag}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground">None</span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Output Tab */}
+          <TabsContent value="output" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>Job Output</CardTitle>
+                  <CardDescription>Console output from the job execution</CardDescription>
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon">
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Copy to clipboard</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </CardHeader>
+              <CardContent>
+                <pre className="bg-black text-green-400 p-4 rounded-md overflow-auto h-[500px] text-sm font-mono">
+                  {job.output}
+                </pre>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Variables Tab */}
+          <TabsContent value="variables" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Extra Variables</CardTitle>
+                <CardDescription>Variables passed to the job template</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <pre className="bg-muted p-4 rounded-md overflow-auto text-sm font-mono">
+                  {JSON.stringify(job.extraVars, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  )
 }
