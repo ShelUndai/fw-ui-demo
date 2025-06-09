@@ -42,7 +42,7 @@ const firewallRules = {
   inbound: [
     { id: 1, port: 22, protocol: "TCP", source: "10.0.0.0/8", action: "ALLOW", description: "SSH Access" },
     { id: 2, port: 80, protocol: "TCP", source: "0.0.0.0/0", action: "ALLOW", description: "HTTP" },
-    { id: 3, port: 443, protocol: "TCP", source: "0.0.0.0/0", action: "ALLOW", description: "HTTPS" },
+    { id: 3, port: 443, protocol: 'TCP", source: 0.0.0.0/0', action: "ALLOW", description: "HTTPS" },
     { id: 4, port: 3389, protocol: "TCP", source: "10.0.0.0/8", action: "ALLOW", description: "RDP Access" },
     { id: 5, port: 1433, protocol: "TCP", source: "10.0.0.0/8", action: "ALLOW", description: "SQL Server" },
   ],
@@ -793,7 +793,7 @@ export default function JobDetailsPage() {
                     </div>
                     <svg className="w-full h-full" viewBox="0 0 100 100">
                       {/* Background circle */}
-                      <circle cx="50" cy="50" r="45" fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="hsl(var(--muted))" strokeWidth="10" strokeWidth="10" />
                       {/* Foreground circle */}
                       <circle
                         cx="50"
@@ -889,177 +889,166 @@ export default function JobDetailsPage() {
 
                       <h3 className="text-lg font-medium mt-6 mb-4">Server Comparison</h3>
 
-                      {/* Map through servers by name to create pairs */}
-                      {Array.from(
-                        new Set([
-                          ...job.dataCenters[0].serverGroups.flatMap((g) => g.servers.map((s) => s.name)),
-                          ...job.dataCenters[1].serverGroups.flatMap((g) => g.servers.map((s) => s.name)),
-                        ]),
-                      )
-                        .map((serverName) => {
-                          const gf1Server = job.dataCenters[0].serverGroups
-                            .flatMap((g) => g.servers)
-                            .find((s) => s.name === serverName)
-                          const gf2Server = job.dataCenters[1].serverGroups
-                            .flatMap((g) => g.servers)
-                            .find((s) => s.name === serverName)
-
-                          // Skip if both servers are aligned and we're only showing drifting
-                          if (
-                            showOnlyDrift &&
-                            (!gf1Server || gf1Server.status === "aligned") &&
-                            (!gf2Server || gf2Server.status === "aligned")
-                          ) {
-                            return null
-                          }
-
-                          return (
-                            <Collapsible key={serverName} className="border rounded-lg mb-4">
-                              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50">
-                                <div className="font-medium">{serverName}</div>
-                                <div className="flex items-center gap-4">
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-sm font-medium">GF1:</span>
-                                      {gf1Server ? (
-                                        getDriftStatusBadge(gf1Server.status)
-                                      ) : (
-                                        <Badge variant="outline">Not Present</Badge>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-sm font-medium">GF2:</span>
-                                      {gf2Server ? (
-                                        getDriftStatusBadge(gf2Server.status)
-                                      ) : (
-                                        <Badge variant="outline">Not Present</Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <ChevronDown className="h-4 w-4" />
-                                </div>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                <div className="p-4 pt-0 border-t">
-                                  <div className="grid grid-cols-2 gap-4">
-                                    {/* GF1 Server */}
-                                    <div className="border rounded-md p-3">
-                                      <h4 className="font-medium mb-2">GF1: {serverName}</h4>
-                                      {!gf1Server ? (
-                                        <div className="text-center py-4 text-muted-foreground">
-                                          Server not present in GF1
+                      {job.mnemonics.map((mnemonic) => (
+                        <div key={mnemonic} className="space-y-4">
+                          <h4 className="text-xl font-semibold">{mnemonic} Server Comparison</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* GF1 Column */}
+                            <Card>
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-base">{job.dataCenters[0].name} Servers</CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                {job.dataCenters[0].serverGroups
+                                  .filter((group) => group.mnemonic === mnemonic)
+                                  .flatMap((g) => g.servers)
+                                  .filter((server) => !showOnlyDrift || server.status === "drifting")
+                                  .map((server) => (
+                                    <Collapsible key={`gf1-${server.name}`} className="border rounded-lg">
+                                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50">
+                                        <div className="flex items-center gap-2">
+                                          <Server className="h-4 w-4 text-muted-foreground" />
+                                          <span className="font-medium">{server.name}</span>
                                         </div>
-                                      ) : gf1Server.status === "aligned" ? (
-                                        <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-md">
-                                          <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                                            <Check className="h-4 w-4" />
-                                            <span>All firewall rules are aligned with baseline</span>
-                                          </div>
+                                        <div className="flex items-center gap-2">
+                                          {getDriftStatusBadge(server.status)}
+                                          <ChevronDown className="h-4 w-4" />
                                         </div>
-                                      ) : (
-                                        <div>
-                                          <h5 className="text-sm font-medium mb-2">Drifting Rules</h5>
-                                          <div className="border rounded-md overflow-hidden">
-                                            <div className="grid grid-cols-5 gap-2 p-2 bg-muted text-xs font-medium">
-                                              <div>Port</div>
-                                              <div>Protocol</div>
-                                              <div>Source/Dest</div>
-                                              <div>Action</div>
-                                              <div>Description</div>
+                                      </CollapsibleTrigger>
+                                      <CollapsibleContent>
+                                        <div className="p-3 pt-0 border-t">
+                                          {server.status === "aligned" ? (
+                                            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-md">
+                                              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                                                <Check className="h-4 w-4" />
+                                                <span>All firewall rules are aligned with baseline</span>
+                                              </div>
                                             </div>
-                                            <div className="divide-y">
-                                              {gf1Server.driftingRules.map((ruleId) => {
-                                                // Find the rule in either inbound or outbound
-                                                const inboundRule = job.firewallRules.inbound.find(
-                                                  (r) => r.id === ruleId,
-                                                )
-                                                const outboundRule = job.firewallRules.outbound.find(
-                                                  (r) => r.id === ruleId,
-                                                )
-                                                const rule = inboundRule || outboundRule
-                                                if (!rule) return null
+                                          ) : (
+                                            <div>
+                                              <h5 className="text-sm font-medium mb-2">Drifting Rules</h5>
+                                              <div className="border rounded-md overflow-hidden">
+                                                <div className="grid grid-cols-5 gap-2 p-2 bg-muted text-xs font-medium">
+                                                  <div>Port</div>
+                                                  <div>Protocol</div>
+                                                  <div>Source/Dest</div>
+                                                  <div>Action</div>
+                                                  <div>Description</div>
+                                                </div>
+                                                <div className="divide-y">
+                                                  {server.driftingRules?.map((ruleId) => {
+                                                    const inboundRule = job.firewallRules.inbound.find(
+                                                      (r) => r.id === ruleId,
+                                                    )
+                                                    const outboundRule = job.firewallRules.outbound.find(
+                                                      (r) => r.id === ruleId,
+                                                    )
+                                                    const rule = inboundRule || outboundRule
+                                                    if (!rule) return null
 
-                                                return (
-                                                  <div
-                                                    key={rule.id}
-                                                    className="grid grid-cols-5 gap-2 p-2 text-xs bg-amber-50 dark:bg-amber-950/20"
-                                                  >
-                                                    <div>{rule.port}</div>
-                                                    <div>{rule.protocol}</div>
-                                                    <div>{rule.source || rule.destination}</div>
-                                                    <div>{rule.action}</div>
-                                                    <div>{rule.description}</div>
-                                                  </div>
-                                                )
-                                              })}
+                                                    return (
+                                                      <div
+                                                        key={rule.id}
+                                                        className="grid grid-cols-5 gap-2 p-2 text-xs bg-amber-50 dark:bg-amber-950/20"
+                                                      >
+                                                        <div>{rule.port}</div>
+                                                        <div>{rule.protocol}</div>
+                                                        <div>{rule.source || rule.destination}</div>
+                                                        <div>{rule.action}</div>
+                                                        <div>{rule.description}</div>
+                                                      </div>
+                                                    )
+                                                  })}
+                                                </div>
+                                              </div>
                                             </div>
-                                          </div>
+                                          )}
                                         </div>
-                                      )}
-                                    </div>
+                                      </CollapsibleContent>
+                                    </Collapsible>
+                                  ))}
+                              </CardContent>
+                            </Card>
 
-                                    {/* GF2 Server */}
-                                    <div className="border rounded-md p-3">
-                                      <h4 className="font-medium mb-2">GF2: {serverName}</h4>
-                                      {!gf2Server ? (
-                                        <div className="text-center py-4 text-muted-foreground">
-                                          Server not present in GF2
+                            {/* GF2 Column */}
+                            <Card>
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-base">{job.dataCenters[1].name} Servers</CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                {job.dataCenters[1].serverGroups
+                                  .filter((group) => group.mnemonic === mnemonic)
+                                  .flatMap((g) => g.servers)
+                                  .filter((server) => !showOnlyDrift || server.status === "drifting")
+                                  .map((server) => (
+                                    <Collapsible key={`gf2-${server.name}`} className="border rounded-lg">
+                                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50">
+                                        <div className="flex items-center gap-2">
+                                          <Server className="h-4 w-4 text-muted-foreground" />
+                                          <span className="font-medium">{server.name}</span>
                                         </div>
-                                      ) : gf2Server.status === "aligned" ? (
-                                        <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-md">
-                                          <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                                            <Check className="h-4 w-4" />
-                                            <span>All firewall rules are aligned with baseline</span>
-                                          </div>
+                                        <div className="flex items-center gap-2">
+                                          {getDriftStatusBadge(server.status)}
+                                          <ChevronDown className="h-4 w-4" />
                                         </div>
-                                      ) : (
-                                        <div>
-                                          <h5 className="text-sm font-medium mb-2">Drifting Rules</h5>
-                                          <div className="border rounded-md overflow-hidden">
-                                            <div className="grid grid-cols-5 gap-2 p-2 bg-muted text-xs font-medium">
-                                              <div>Port</div>
-                                              <div>Protocol</div>
-                                              <div>Source/Dest</div>
-                                              <div>Action</div>
-                                              <div>Description</div>
+                                      </CollapsibleTrigger>
+                                      <CollapsibleContent>
+                                        <div className="p-3 pt-0 border-t">
+                                          {server.status === "aligned" ? (
+                                            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-md">
+                                              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                                                <Check className="h-4 w-4" />
+                                                <span>All firewall rules are aligned with baseline</span>
+                                              </div>
                                             </div>
-                                            <div className="divide-y">
-                                              {gf2Server.driftingRules.map((ruleId) => {
-                                                // Find the rule in either inbound or outbound
-                                                const inboundRule = job.firewallRules.inbound.find(
-                                                  (r) => r.id === ruleId,
-                                                )
-                                                const outboundRule = job.firewallRules.outbound.find(
-                                                  (r) => r.id === ruleId,
-                                                )
-                                                const rule = inboundRule || outboundRule
-                                                if (!rule) return null
+                                          ) : (
+                                            <div>
+                                              <h5 className="text-sm font-medium mb-2">Drifting Rules</h5>
+                                              <div className="border rounded-md overflow-hidden">
+                                                <div className="grid grid-cols-5 gap-2 p-2 bg-muted text-xs font-medium">
+                                                  <div>Port</div>
+                                                  <div>Protocol</div>
+                                                  <div>Source/Dest</div>
+                                                  <div>Action</div>
+                                                  <div>Description</div>
+                                                </div>
+                                                <div className="divide-y">
+                                                  {server.driftingRules?.map((ruleId) => {
+                                                    const inboundRule = job.firewallRules.inbound.find(
+                                                      (r) => r.id === ruleId,
+                                                    )
+                                                    const outboundRule = job.firewallRules.outbound.find(
+                                                      (r) => r.id === ruleId,
+                                                    )
+                                                    const rule = inboundRule || outboundRule
+                                                    if (!rule) return null
 
-                                                return (
-                                                  <div
-                                                    key={rule.id}
-                                                    className="grid grid-cols-5 gap-2 p-2 text-xs bg-amber-50 dark:bg-amber-950/20"
-                                                  >
-                                                    <div>{rule.port}</div>
-                                                    <div>{rule.protocol}</div>
-                                                    <div>{rule.source || rule.destination}</div>
-                                                    <div>{rule.action}</div>
-                                                    <div>{rule.description}</div>
-                                                  </div>
-                                                )
-                                              })}
+                                                    return (
+                                                      <div
+                                                        key={rule.id}
+                                                        className="grid grid-cols-5 gap-2 p-2 text-xs bg-amber-50 dark:bg-amber-950/20"
+                                                      >
+                                                        <div>{rule.port}</div>
+                                                        <div>{rule.protocol}</div>
+                                                        <div>{rule.source || rule.destination}</div>
+                                                        <div>{rule.action}</div>
+                                                        <div>{rule.description}</div>
+                                                      </div>
+                                                    )
+                                                  })}
+                                                </div>
+                                              </div>
                                             </div>
-                                          </div>
+                                          )}
                                         </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </CollapsibleContent>
-                            </Collapsible>
-                          )
-                        })
-                        .filter(Boolean)}
+                                      </CollapsibleContent>
+                                    </Collapsible>
+                                  ))}
+                              </CardContent>
+                            </Card>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>
@@ -1325,8 +1314,8 @@ export default function JobDetailsPage() {
                             </Collapsible>
                           </div>
                         </div>
-                      )}\
-                    </div>
+                      )
+                    }\
                   </CardContent>
                 </Card>
               </TabsContent>
